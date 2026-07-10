@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Convertidor Excel → ClientesPotenciales.js (actualización automática)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#1F5CA9; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .panel { background:#fff; border-radius:16px; padding:36px; max-width:720px; width:100%; box-shadow:0 8px 40px rgba(0,0,0,.25); }
+    h1 { font-size:20px; color:#1F5CA9; margin-bottom:6px; }
+    .sub { color:#666; font-size:13px; margin-bottom:24px; line-height:1.5; }
+    #drop { border:3px dashed #b6c8e4; border-radius:12px; padding:44px 20px; text-align:center; cursor:pointer; transition:all .2s; color:#5a6b85; font-size:15px; }
+    #drop.over { border-color:#1F5CA9; background:#eef4fc; }
+    #drop strong { color:#1F5CA9; }
+    #fileInput { display:none; }
+    .steps { margin-top:22px; font-size:12.5px; color:#777; line-height:1.9; }
+    .steps b { color:#444; }
+    #resultado { display:none; margin-top:22px; }
+    .ok { background:#d1fae5; border-left:4px solid #059669; padding:12px 16px; border-radius:8px; font-size:14px; color:#065f46; margin-bottom:12px; }
+    .warn { background:#fef3c7; border-left:4px solid #d97706; padding:12px 16px; border-radius:8px; font-size:12.5px; color:#78350f; margin-bottom:12px; white-space:pre-line; max-height:160px; overflow:auto; }
+    .err { background:#fee2e2; border-left:4px solid #dc2626; padding:12px 16px; border-radius:8px; font-size:13px; color:#7f1d1d; margin-bottom:12px; }
+    #btnDescargar { display:inline-block; background:#1F5CA9; color:#fff; border:none; padding:13px 26px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-right:10px; }
+    #btnDescargar:hover { background:#17497f; }
+    #btnActualizarMapa { display:inline-block; background:#059669; color:#fff; border:none; padding:13px 26px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
+    #btnActualizarMapa:hover { background:#047857; }
+    .flex { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+  </style>
+</head>
+<body>
+<div class="panel">
+  <h1>👥 Convertidor: Excel → ClientesPotenciales.js (actualización automática)</h1>
+  <p class="sub">Convierte tu Excel de <b>clientes potenciales</b> al archivo de datos del mapa. <br>
+  <span style="color:#1F5CA9;">⬇ Descarga el JS y, si el mapa está abierto, actualízalo con un solo clic.</span></p>
+
+  <div id="drop">
+    Arrastra aquí tu Excel<br>o <strong>haz clic para elegir el archivo</strong>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+  </div>
+
+  <div id="resultado">
+    <div class="ok" id="msgOk"></div>
+    <div class="warn" id="msgWarn" style="display:none"></div>
+    <div class="flex">
+      <button id="btnDescargar">⬇ Descargar ClientesPotenciales.js</button>
+      <button id="btnActualizarMapa">🔄 Actualizar mapa ahora</button>
+    </div>
+    <p class="steps" style="margin-top:10px">
+      <b>Para actualizar el mapa sin recargar:</b> ten abierto <code>Mapa_ClientesPotenciales.html</code> (debe incluir el script de escucha) y pulsa el botón de arriba.
+    </p>
+  </div>
+  <div class="err" id="msgErr" style="display:none"></div>
+
+  <div class="steps">
+    <b>Columnas esperadas (en cualquier orden):</b><br>
+    <code>nombre, lat, lon</code> (obligatorias) — <code>grupo, estado</code> (opcionales)<br>
+    <b>Ejemplo:</b> nombre: "Cliente A", lat: 19.7046, lon: -101.2446
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const drop = document.getElementById('drop');
+  const input = document.getElementById('fileInput');
+
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('over');
+    if (e.dataTransfer.files.length) procesar(e.dataTransfer.files[0]);
+  });
+  input.addEventListener('change', () => { if (input.files.length) procesar(input.files[0]); });
+
+  function procesar(archivo) {
+    ocultar();
+    const lector = new FileReader();
+    lector.onload = function(ev) {
+      try {
+        const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' });
+        // Buscar hoja llamada "Estaciones" o "Clientes"; si no, la primera
+        let hoja = wb.SheetNames.find(n => /estaciones|clientes/i.test(n)) || wb.SheetNames[0];
+        const filas = XLSX.utils.sheet_to_json(wb.Sheets[hoja], { defval:null });
+        if (!filas.length) return error('La hoja "' + hoja + '" está vacía.');
+
+        const salida = [], avisos = [];
+        const getVal = (fila, nombreCol) => {
+          const key = Object.keys(fila).find(k => k.toLowerCase().trim() === nombreCol);
+          return key ? fila[key] : null;
+        };
+
+        filas.forEach((f, idx) => {
+          const numFila = idx + 2;
+          const nombre = getVal(f, 'nombre');
+          // Limpiar comas y espacios en lat/lon
+          const latStr = String(getVal(f, 'lat') || '').replace(/,/g, '.').trim();
+          const lonStr = String(getVal(f, 'lon') || '').replace(/,/g, '.').trim();
+          const lat = parseFloat(latStr);
+          const lon = parseFloat(lonStr);
+          const grupo = getVal(f, 'grupo') || '';
+          const estado = getVal(f, 'estado') || '';
+
+          if (!nombre && isNaN(lat)) return; // fila vacía
+          if (!nombre) { avisos.push('Fila '+numFila+': falta nombre — omitida'); return; }
+          if (isNaN(lat) || isNaN(lon)) {
+            avisos.push('Fila '+numFila+' ('+nombre+'): lat/lon inválidos — omitida');
+            return;
+          }
+          // Validación aproximada de México
+          if (lat < 14 || lat > 33 || lon < -118 || lon > -86)
+            avisos.push('Fila '+numFila+' ('+nombre+'): coordenadas fuera de México ('+lat+', '+lon+')');
+
+          const esc = s => String(s).replace(/"/g, "'").replace(/[\r\n]+/g, " ").trim();
+          salida.push(`    { nombre: "${esc(nombre)}", lat: ${lat}, lon: ${lon}, grupo: "${esc(grupo)}", estado: "${esc(estado)}" }`);
+        });
+
+        if (!salida.length) return error('No se leyeron clientes válidos. Verifica los encabezados: nombre, lat, lon (grupo y estado son opcionales).');
+
+        const contenidoJS =
+          '// ============================================================\n' +
+          '// ARCHIVO GENERADO desde ' + archivo.name + ' — ' + new Date().toLocaleString('es-MX') + '\n' +
+          '// NO editar a mano: usa el convertidor.\n' +
+          '// ============================================================\n' +
+          'window.CLIENTES_POTENCIALES = [\n' + salida.join(',\n') + '\n  ];\n';
+
+        // Guardamos en localStorage con clave CLIENTES_JS
+        try {
+          localStorage.setItem('CLIENTES_JS', contenidoJS);
+          localStorage.setItem('CLIENTES_ACTUALIZADO', Date.now().toString());
+        } catch (e) { /* ignorar */ }
+
+        document.getElementById('msgOk').textContent = '✓ ' + salida.length + ' clientes convertidos (hoja: ' + hoja + ')';
+        const w = document.getElementById('msgWarn');
+        if (avisos.length) { w.style.display='block'; w.textContent = '⚠ ' + avisos.length + ' advertencia(s):\n' + avisos.join('\n'); }
+        document.getElementById('resultado').style.display = 'block';
+        window._contenidoJS = contenidoJS;
+
+      } catch (e) { error('No pude leer el archivo: ' + e.message); }
+    };
+    lector.readAsArrayBuffer(archivo);
+  }
+
+  document.getElementById('btnDescargar').addEventListener('click', () => {
+    if (!window._contenidoJS) return;
+    const blob = new Blob([window._contenidoJS], { type:'text/javascript;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ClientesPotenciales.js';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('btnActualizarMapa').addEventListener('click', () => {
+    if (!window._contenidoJS) {
+      alert('Primero convierte un Excel.');
+      return;
+    }
+    try {
+      localStorage.setItem('CLIENTES_JS', window._contenidoJS);
+      localStorage.setItem('CLIENTES_ACTUALIZADO', Date.now().toString());
+      alert('✅ Datos guardados. Si el mapa está abierto en otra pestaña, se actualizará en segundos.');
+    } catch (e) {
+      alert('Error al guardar en localStorage: ' + e.message);
+    }
+  });
+
+  function error(msg) { const e = document.getElementById('msgErr'); e.style.display='block'; e.textContent = '✗ ' + msg; }
+  function ocultar() { document.getElementById('msgErr').style.display='none'; document.getElementById('msgWarn').style.display='none'; document.getElementById('resultado').style.display='none'; }
+})();
+</script>
+</body>
+</html>

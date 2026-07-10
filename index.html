@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clientes Potenciales · GNU MADRE</title>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== ESTILOS COMPLETOS (sin cambios) ===== */
+    :root {
+      --primary: #1F5CA9;
+      --primary-hover: #004a8f;
+      --secondary: #27BFF0;
+      --bg-main: #f0f4f8;
+      --bg-panel: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.08);
+      --transition: all 0.2s ease-in-out;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 100%;
+      background: var(--bg-panel);
+      box-shadow: var(--shadow-lg);
+    }
+    .topbar {
+      background: linear-gradient(135deg, #1F5CA9 0%, #0082D6 50%, #27BFF0 100%);
+      color: #fff;
+      padding: 0.5rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
+      z-index: 10;
+    }
+    .topbar .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; }
+    .topbar .brand i { font-size: 1.2rem; color: rgba(255,255,255,0.9); }
+    .topbar .readouts { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+    .topbar .readout { 
+      background: rgba(255,255,255,0.15); border-radius: 2rem; 
+      padding: 0.2rem 0.7rem; display: flex; align-items: baseline; gap: 0.3rem; font-size: 0.8rem; 
+      backdrop-filter: blur(4px);
+    }
+    .topbar .readout .num { font-weight: 700; font-size: 1rem; }
+    .topbar .status-badge {
+      background: rgba(255,255,255,0.2); border-radius: 2rem;
+      padding: 0.2rem 0.7rem; font-size: 0.7rem; display: flex; align-items: center; gap: 0.3rem;
+      font-weight: 500;
+    }
+    .topbar .stats {
+      display: flex;
+      gap: 0.8rem;
+      font-size: 0.7rem;
+      background: rgba(255,255,255,0.1);
+      padding: 0.2rem 0.8rem;
+      border-radius: 2rem;
+    }
+    .topbar .stats .stat { display: flex; align-items: center; gap: 0.2rem; }
+
+    .toolbar {
+      background: #f8fafc; padding: 0.4rem 1.2rem; border-bottom: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; flex-shrink: 0; z-index: 9;
+    }
+    .toolbar .search { 
+      flex: 1; min-width: 150px; display: flex; align-items: center;
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 2rem; 
+      padding: 0.2rem 0.8rem; transition: var(--transition);
+    }
+    .toolbar .search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31,92,169,0.1); }
+    .toolbar .search input { border: none; outline: none; flex: 1; padding: 0.3rem 0.4rem; font-size: 0.8rem; background: transparent; }
+    .toolbar .search i { color: #94a3b8; }
+    
+    .toolbar .filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .toolbar .filters select { 
+      padding: 0.3rem 1.8rem 0.3rem 0.8rem; border-radius: 2rem; border: 1px solid var(--border); 
+      background: var(--bg-panel); font-size: 0.75rem; cursor: pointer; appearance: none; color: var(--text-main);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236A767D' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); 
+      background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 10px;
+      transition: var(--transition);
+      max-width: 180px;
+      min-width: 120px;
+    }
+    .toolbar .filters select:hover { border-color: #cbd5e1; }
+    .toolbar .filters select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31,92,169,0.1); }
+    
+    .toolbar .dist-slider {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .toolbar .dist-slider input[type="range"] {
+      width: 80px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .toolbar .dist-slider span { min-width: 40px; font-weight: 600; color: var(--text-main); }
+
+    .toolbar .btn {
+      background: var(--border); color: var(--text-main); border: none; border-radius: 2rem;
+      padding: 0.3rem 0.8rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 0.3rem; transition: var(--transition);
+      white-space: nowrap;
+    }
+    .toolbar .btn:hover { background: var(--border-hover); }
+    .toolbar .btn:active { transform: scale(0.96); }
+    .toolbar .btn-primary { background: var(--primary); color: #fff; }
+    .toolbar .btn-primary:hover { background: var(--primary-hover); }
+    .toolbar .btn-secondary { background: #6b7280; color: #fff; }
+    .toolbar .btn-secondary:hover { background: #4b5563; }
+    .toolbar .btn-clear-all { background: #fee2e2; color: #ef4444; }
+    .toolbar .btn-clear-all:hover { background: #fecaca; }
+    .toolbar .btn-clear-all.hidden { display: none; }
+    .toolbar .btn-success { background: #10b981; color: #fff; }
+    .toolbar .btn-success:hover { background: #059669; }
+    .toolbar .btn-warning { background: #f59e0b; color: #fff; }
+    .toolbar .btn-warning:hover { background: #d97706; }
+    
+    .toolbar .btn-loc .spinner { display: none; animation: spin 0.8s linear infinite; }
+    .toolbar .btn-loc.loading .spinner { display: inline-block; }
+    .toolbar .btn-loc.loading .loc-icon { display: none; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    .toolbar .separator {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 0.2rem;
+    }
+
+    .stage { display: flex; flex: 1; overflow: hidden; position: relative; }
+    #map { flex: 1; height: 100%; min-height: 300px; z-index: 1; }
+    
+    .rail {
+      width: 300px; max-height: 100%; overflow-y: auto; overflow-x: hidden;
+      border-left: 1px solid var(--border); background: var(--bg-panel); flex-shrink: 0;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .rail.hidden { width: 0; border-left: none; }
+    .rail-head {
+      padding: 0.8rem 1.2rem; background: #f8fafc; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 600; font-size: 0.8rem; color: var(--text-main);
+      position: sticky; top: 0; z-index: 2;
+    }
+    .rail-list { list-style: none; padding: 0; margin: 0; }
+    .rail-list li {
+      padding: 0.6rem 1.2rem; border-bottom: 1px solid #f1f5f9; cursor: pointer;
+      display: flex; flex-direction: column; gap: 0.2rem;
+      font-size: 0.8rem; transition: var(--transition);
+    }
+    .rail-list li:hover { background: #f8fafc; padding-left: 1.5rem; }
+    .rail-list li .top-row { display: flex; justify-content: space-between; align-items: center; }
+    .rail-list li .name { font-weight: 600; color: var(--text-main); }
+    .rail-list li .dist { font-weight: 700; color: var(--primary); font-size: 0.8rem; }
+    .rail-list li .state-tag { 
+      background: #e0f2fe; color: #0369a1; padding: 0.1rem 0.5rem; 
+      border-radius: 1rem; font-size: 0.6rem; font-weight: 500; align-self: flex-start;
+    }
+    .rail-list li .group-header {
+      background: #f8fafc;
+      font-weight: 600;
+      padding: 0.4rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .empty { padding: 2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+
+    .gnv-cluster { background: transparent; }
+    .gnv-cluster .bubble {
+      width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center;
+      font-weight: 700; color: #fff; background: radial-gradient(circle at 30% 30%, #5bc0eb, var(--primary) 80%);
+      border: 2px solid #fff; box-shadow: 0 0 0 4px rgba(39,191,240,0.2), var(--shadow-sm);
+      cursor: pointer; transition: transform 0.2s;
+    }
+    .gnv-cluster:hover .bubble { transform: scale(1.05); }
+    
+    .location-marker { background: none; border: none; }
+    .location-marker .dot {
+      width: 18px; height: 18px; border-radius: 50%; background: var(--secondary);
+      border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(39,191,240,0.25), 0 0 12px rgba(39,191,240,0.7);
+    }
+
+    .price-legend {
+      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px);
+      padding: 10px 14px; border-radius: 12px; box-shadow: var(--shadow-lg);
+      font-size: 11px; line-height: 1.5; min-width: 150px;
+      border: 1px solid rgba(255,255,255,0.5); cursor: default;
+    }
+    .price-legend .title {
+      font-weight: 700; margin-bottom: 6px; font-size: 12px; color: var(--text-main);
+      border-bottom: 1px solid var(--border); padding-bottom: 4px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .price-legend .title .clear-btn {
+      background: none; border: none; color: var(--text-muted); font-size: 10px;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: var(--transition);
+    }
+    .price-legend .title .clear-btn:hover { background: #f1f5f9; color: #ef4444; }
+    .price-legend .row {
+      display: flex; align-items: center; gap: 6px; margin: 3px 0; padding: 3px 6px;
+      border-radius: 6px; cursor: pointer; transition: var(--transition);
+    }
+    .price-legend .row:hover { background: #f8fafc; }
+    .price-legend .row.active { background: #f0f9ff; box-shadow: inset 0 0 0 1px var(--secondary); }
+    .price-legend .color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+    .price-legend .label { color: var(--text-main); flex: 1; font-weight: 500; font-size: 11px; }
+    .price-legend .count { font-size: 9px; color: var(--text-muted); background: var(--bg-main); padding: 1px 5px; border-radius: 10px; font-weight: 600; }
+
+    /* Leyenda de ductos */
+    .ducto-legend {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(6px);
+      padding: 10px 14px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 10px;
+      line-height: 1.4;
+      min-width: 120px;
+      border: 1px solid rgba(255,255,255,0.5);
+      cursor: default;
+      z-index: 1000;
+    }
+    .ducto-legend .title {
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--text-main);
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ducto-legend .title:hover { color: var(--primary); }
+    .ducto-legend .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      margin: 2px 0;
+    }
+    .ducto-legend .row:hover { background: #f1f5f9; }
+    .ducto-legend .row.active {
+      background: #e0f2fe;
+      box-shadow: inset 0 0 0 2px var(--secondary);
+    }
+    .ducto-legend .line { width: 18px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+    .ducto-legend .swatch { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .ducto-legend .swatch svg { width: 18px; height: 18px; }
+    .ducto-legend .reset-btn {
+      background: none; border: none; color: var(--text-muted); font-size: 10px;
+      cursor: pointer; padding: 0 4px; transition: var(--transition);
+    }
+    .ducto-legend .reset-btn:hover { color: #ef4444; }
+
+    .zona-legend {
+      background: rgba(255,255,255,0.9); backdrop-filter: blur(6px);
+      padding: 8px 12px; border-radius: 10px; box-shadow: var(--shadow-sm);
+      font-size: 10px; line-height: 1.4; min-width: 100px;
+      border: 1px solid rgba(255,255,255,0.5);
+    }
+    .zona-legend .title { font-weight: 600; font-size: 11px; color: var(--text-main); margin-bottom: 4px; }
+    .zona-legend .row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+    .zona-legend .line { width: 18px; height: 3px; border-radius: 2px; flex-shrink: 0; background: #1F5CA9; }
+
+    .leaflet-popup-content { font-size: 0.8rem; font-family: 'Inter', sans-serif; margin: 10px; }
+    .cluster-popup-list { max-height: 180px; overflow-y: auto; padding-right: 4px; }
+    .cluster-popup-list .item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
+    .cluster-popup-list .item:last-child { border-bottom: none; }
+    .cluster-popup-list .item .name { color: var(--text-main); font-weight: 500; }
+    .cluster-popup-list .item .state { color: var(--text-muted); font-size: 0.65rem; background: #f8fafc; padding: 2px 6px; border-radius: 10px; }
+
+    .btn-route {
+      display: inline-block;
+      margin-top: 4px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 2rem;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-route:hover { background: var(--primary-hover); }
+
+    @media (max-width: 768px) {
+      .topbar { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+      .rail { width: 100%; max-height: 40vh; border-left: none; border-top: 1px solid var(--border); position: absolute; bottom: 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
+      .rail.hidden { transform: translateY(100%); }
+      .toolbar .search { min-width: 100%; }
+      .toolbar { gap: 0.4rem; justify-content: space-between; }
+      .toolbar .filters select, .toolbar .btn { flex: 1; text-align: center; justify-content: center; font-size: 0.7rem; }
+      .toolbar .dist-slider input[type="range"] { width: 60px; }
+      .toolbar .separator { display: none; }
+      .ducto-legend { min-width: 90px; font-size: 9px; }
+    }
+
+    /* ===== MODAL DE TOKEN MAPBOX ===== */
+    .token-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .token-overlay.visible { opacity: 1; pointer-events: all; }
+    .token-modal {
+      background: #fff; border-radius: 16px; padding: 2rem;
+      max-width: 460px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      transform: translateY(12px); transition: transform 0.25s;
+    }
+    .token-overlay.visible .token-modal { transform: translateY(0); }
+    .token-modal h2 { font-size: 1.1rem; color: var(--primary); margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
+    .token-modal p { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5; }
+    .token-modal .field { display: flex; gap: 0.5rem; }
+    .token-modal input {
+      flex: 1; padding: 0.5rem 0.8rem; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.8rem; font-family: 'Consolas', monospace; outline: none;
+      transition: border-color 0.2s;
+    }
+    .token-modal input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31,92,169,0.1); }
+    .token-modal input.error { border-color: #ef4444; }
+    .token-modal .btn-save {
+      background: var(--primary); color: #fff; border: none; border-radius: 8px;
+      padding: 0.5rem 1.2rem; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      transition: background 0.2s; white-space: nowrap;
+    }
+    .token-modal .btn-save:hover { background: var(--primary-hover); }
+    .token-modal .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+    .token-modal .btn-skip { background: none; border: none; color: var(--text-muted); font-size: 0.75rem; cursor: pointer; padding: 0.3rem 0; }
+    .token-modal .btn-skip:hover { color: #ef4444; }
+    .token-modal .btn-remove { background: #fee2e2; color: #ef4444; border: none; border-radius: 6px; padding: 0.3rem 0.8rem; font-size: 0.7rem; cursor: pointer; }
+    .token-modal .btn-remove:hover { background: #fecaca; }
+    .token-modal .status { font-size: 0.75rem; margin-top: 0.6rem; padding: 0.3rem 0.6rem; border-radius: 6px; }
+    .token-modal .status.ok { background: #d1fae5; color: #065f46; }
+    .token-modal .status.err { background: #fee2e2; color: #991b1b; }
+    .token-modal .hint { font-size: 0.7rem; color: #94a3b8; margin-top: 0.5rem; }
+    .token-modal .hint a { color: var(--primary); }
+    /* Botón de engranaje en la barra */
+    .btn-gear {
+      background: rgba(255,255,255,0.15) !important; color: #fff !important;
+      border: 1px solid rgba(255,255,255,0.25) !important; font-size: 0.75rem !important;
+    }
+    .btn-gear:hover { background: rgba(255,255,255,0.25) !important; }
+    .btn-gear .dot-active { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10b981; margin-left: 4px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <!-- Modal de token Mapbox -->
+  <div class="token-overlay" id="tokenOverlay">
+    <div class="token-modal">
+      <h2>🗺️ Token de Mapbox</h2>
+      <p>Ingresa tu Access Token de Mapbox para habilitar capas de alta calidad (satélite, calles, terreno). Las capas gratuitas (CARTO, Esri) siempre están disponibles sin token.</p>
+      <div class="field">
+        <input type="text" id="tokenInput" placeholder="pk.eyJ1Ijo..." spellcheck="false" autocomplete="off" />
+        <button class="btn-save" id="tokenSaveBtn">Guardar</button>
+      </div>
+      <div id="tokenStatus"></div>
+      <div class="hint">Obtén tu token gratis en <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener">account.mapbox.com</a></div>
+      <div class="actions">
+        <button class="btn-skip" id="tokenSkipBtn">Continuar sin Mapbox</button>
+        <button class="btn-remove hidden" id="tokenRemoveBtn">Eliminar token</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="brand"><i class="fas fa-users"></i> Clientes Potenciales · GNU MADRE</div>
+    <div class="readouts">
+      <span class="readout"><span class="num" id="rTotal">0</span> clientes</span>
+      <span class="readout"><span class="num" id="rMatch">0</span> en vista</span>
+      <span class="status-badge" id="stateStatus"><i class="fas fa-check-circle"></i> Datos cargados</span>
+      <span class="stats" id="stats"></span>
+      <button class="btn btn-gear" id="mapboxGearBtn" title="Configurar token Mapbox"><i class="fas fa-layer-group"></i> Mapbox</button>
+    </div>
+  </div>
+  <div class="toolbar">
+    <div class="search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Buscar cliente…" aria-label="Buscar cliente" />
+    </div>
+    <div class="filters">
+      <select id="stateFilter" aria-label="Filtrar por estado"><option value="all">Todos los estados</option></select>
+    </div>
+    <div class="filters">
+      <select id="ductoFilter" aria-label="Filtrar ductos">
+        <option value="all">Todos los ductos</option>
+      </select>
+    </div>
+    <div class="filters">
+      <select id="zonaFilter" aria-label="Filtrar por zona de regionalización">
+        <option value="all">Todas las zonas</option>
+      </select>
+    </div>
+    <div class="dist-slider">
+      <label for="distSlider">Max dist.</label>
+      <input type="range" id="distSlider" min="60" max="210" value="210" step="5" />
+      <span id="distLabel">210 km</span>
+    </div>
+
+    <!-- ===== PERFIL DE RUTA (TRANSPORTE PESADO) ===== -->
+    <div class="filters">
+      <select id="routeProfile" aria-label="Perfil de ruta">
+        <option value="car">🚗 Automóvil</option>
+        <option value="truck">🚛 Transporte pesado</option>
+      </select>
+    </div>
+    <!-- ============================================= -->
+
+    <span class="separator"></span>
+    <button class="btn btn-secondary" id="toggleDuctosBtn" aria-label="Mostrar/ocultar ductos">
+      <i class="fas fa-eye" id="ductosToggleIcon"></i> <span id="ductosToggleLabel">Ocultar ductos</span>
+    </button>
+    <button class="btn btn-primary" id="centerDuctosBtn" aria-label="Centrar en todos los ductos">
+      <i class="fas fa-expand"></i> Centrar ductos
+    </button>
+
+    <button class="btn btn-loc" id="locBtn" title="Centrar en mi ubicación" aria-label="Mi ubicación">
+      <span class="loc-icon"><i class="fas fa-location-crosshairs"></i></span>
+      <span class="spinner"><i class="fas fa-circle-notch"></i></span>
+      <span>Mi ubicación</span>
+    </button>
+    <button class="btn btn-primary" id="centerGnuBtn" aria-label="Centrar en GNU MADRE">
+      <i class="fas fa-star"></i> GNU MADRE
+    </button>
+    <button class="btn btn-warning" id="clearRouteBtn" aria-label="Limpiar ruta">
+      <i class="fas fa-route"></i> Limpiar ruta
+    </button>
+    <button class="btn btn-success" id="exportBtn" aria-label="Exportar a CSV">
+      <i class="fas fa-file-csv"></i> Exportar
+    </button>
+    <button class="btn btn-toggle-rail" id="toggleRailBtn" title="Mostrar/ocultar directorio" aria-label="Directorio">
+      <i class="fas fa-chevron-right" id="railToggleIcon"></i> <span id="railToggleLabel">Directorio</span>
+    </button>
+    <button class="btn btn-clear-all hidden" id="clearAllBtn" title="Limpiar todos los filtros" aria-label="Limpiar filtros">
+      <i class="fas fa-times"></i> Limpiar filtros
+    </button>
+    <button class="btn btn-primary" id="resetBtn" aria-label="Restablecer vista"><i class="fas fa-home"></i> Restablecer</button>
+  </div>
+  <div class="stage">
+    <div id="map"></div>
+    <div class="rail" id="railPanel">
+      <div class="rail-head"><span>Directorio</span><span id="listCnt" style="color: var(--primary);">0</span></div>
+      <ul class="rail-list" id="list"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts de Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<!-- Datos externos -->
+<script src="ductos.js"></script>
+<script src="ClientesPotenciales.js"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  // ============================================================
+  //  0. FUNCIONES AUXILIARES
+  // ============================================================
+  function distanciaKm(lat1, lon1, lat2, lon2) {
+    const R = 6371, rad = Math.PI/180;
+    const dLat = (lat2-lat1)*rad, dLon = (lon2-lon1)*rad;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dLon/2)**2;
+    return 2*R*Math.asin(Math.sqrt(a));
+  }
+
+  function deduplicate(data) {
+    const seen = new Set();
+    return data.filter(e => {
+      const key = `${Math.round(e.lat*100000)/100000}|${Math.round(e.lon*100000)/100000}|${e.nombre}|${e.estado}`;
+      if (!seen.has(key)) { seen.add(key); return true; }
+      return false;
+    });
+  }
+
+  function getDistRange(km) {
+    if (km <= 100) return { label: '≤ 100 km',     key: 'low',      color: '#10b981' };
+    if (km <= 140) return { label: '100 – 140 km', key: 'mid',      color: '#f59e0b' };
+    if (km <= 180) return { label: '140 – 180 km', key: 'high',     color: '#ef4444' };
+    return                { label: '> 180 km',     key: 'no-price', color: '#94a3b8' };
+  }
+
+  function convertirArrayAGeoJSON(arrayDuctos) {
+    if (!arrayDuctos || !arrayDuctos.length) {
+      return { type: "FeatureCollection", features: [] };
+    }
+    return {
+      type: "FeatureCollection",
+      features: arrayDuctos.map(d => ({
+        type: "Feature",
+        properties: {
+          nombre: d.nombre || "Ducto",
+          tipo: d.grupo || "Gasoducto privado",
+          precio: d.precio,
+          estado: d.estado || "",
+          lat_inicio: d.lat_inicio,
+          lon_inicio: d.lon_inicio,
+          lat_fin: d.lat_fin,
+          lon_fin: d.lon_fin
+        },
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [d.lon_inicio, d.lat_inicio],
+            [d.lon_fin, d.lat_fin]
+          ]
+        }
+      }))
+    };
+  }
+
+  // ============================================================
+  //  1. CARGA DE DUCTOS DESDE localStorage (prioridad)
+  // ============================================================
+  let ductosData = { type: "FeatureCollection", features: [] };
+
+  function cargarDuctosIniciales() {
+    const guardado = localStorage.getItem('DUCTOS_JS');
+    if (guardado) {
+      try {
+        eval(guardado);
+        if (window.DUCTOS && Array.isArray(window.DUCTOS)) {
+          const geojson = convertirArrayAGeoJSON(window.DUCTOS);
+          window.DUCTOS_GAS = geojson;
+          ductosData = geojson;
+          console.log('✅ Ductos cargados desde localStorage');
+          return;
+        }
+      } catch (e) { console.warn('Error al evaluar DUCTOS_JS:', e); }
+    }
+    ductosData = window.DUCTOS_GAS || { type: "FeatureCollection", features: [] };
+    console.log(`📊 Ductos cargados desde archivo: ${ductosData.features.length}`);
+  }
+  cargarDuctosIniciales();
+
+  // ============================================================
+  //  2. DATOS DE ZONAS (9 polígonos)
+  // ============================================================
+  window.ZONAS = {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 1" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-106.950758,31.806516],
+            [-107.065289,27.527498],
+            [-105.922711,25.700673],
+            [-105.083082,23.894759],
+            [-102.693556,24.325956],
+            [-102.742994,24.83548],
+            [-102.616652,25.268424],
+            [-102.567213,25.872946],
+            [-102.715528,26.272612],
+            [-102.797926,27.492564],
+            [-103.300323,29.00694],
+            [-104.511277,29.642675],
+            [-104.70917,30.210238],
+            [-105.108948,30.746557],
+            [-105.600586,31.074109],
+            [-105.896941,31.319653],
+            [-106.247424,31.507192],
+            [-106.396853,31.747999],
+            [-106.950758,31.806516]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 2" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-102.62478,25.313842],
+            [-100.696679,25.040421],
+            [-100.426056,25.539121],
+            [-101.737634,26.750127],
+            [-101.715661,27.205399],
+            [-102.767602,27.034276],
+            [-102.715528,26.272612],
+            [-102.567213,25.872946],
+            [-102.62478,25.313842]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 3" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-101.715486,27.2052446],
+            [-101.7374591,26.7499726],
+            [-100.4258829,25.5389665],
+            [-97.5282427,25.6801416],
+            [-97.1821741,25.6974676],
+            [-97.1467812,25.9612856],
+            [-97.315383,25.9385286],
+            [-97.3742539,25.9155676],
+            [-97.3850309,25.8246456],
+            [-97.5721887,26.0064306],
+            [-97.7644084,26.0522096],
+            [-97.9512162,26.0557896],
+            [-98.2505928,26.0816955],
+            [-98.4455205,26.2186405],
+            [-98.6158883,26.2283825],
+            [-98.7502241,26.3243675],
+            [-98.9015319,26.3613515],
+            [-99.1146746,26.5096765],
+            [-99.2530945,26.8426905],
+            [-99.4343682,27.0238915],
+            [-99.3739443,27.1852575],
+            [-99.4906731,27.2878235],
+            [-99.4728202,27.4341825],
+            [-99.5222591,27.5925185],
+            [-99.7425498,27.6960455],
+            [-99.8999135,27.8720925],
+            [-101.715486,27.2052446]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 4" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-97.182343,25.697622],
+            [-100.426056,25.539121],
+            [-100.696679,25.040421],
+            [-101.733864,22.593775],
+            [-98.196266,21.355946],
+            [-97.548073,21.754447],
+            [-97.85569,22.598846],
+            [-97.763012,22.954704],
+            [-97.668922,24.582143],
+            [-97.182343,25.697622]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 5" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-101.733864,22.593775],
+            [-103.720781,23.157332],
+            [-104.259111,22.783071],
+            [-103.781205,22.067112],
+            [-103.720781,20.434015],
+            [-103.687822,18.606477],
+            [-103.484575,18.335548],
+            [-102.21016,17.917906],
+            [-102.006913,18.006738],
+            [-101.732255,17.79242],
+            [-100.092094,17.985314],
+            [-100.101707,19.204885],
+            [-100.629051,21.33804],
+            [-101.733864,22.593775]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 6" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-101.7310799,22.591186],
+            [-100.6262887,21.3354497],
+            [-100.0989547,19.2022945],
+            [-97.1169006,19.1659811],
+            [-96.2929393,19.4459281],
+            [-96.3478707,19.5080729],
+            [-96.4028015,19.7589978],
+            [-96.6033001,20.0533943],
+            [-97.1498624,20.614822],
+            [-97.2762038,20.8562728],
+            [-97.3970515,21.2407636],
+            [-97.2729933,21.5226778],
+            [-97.5453659,21.7518583],
+            [-98.1935467,21.3533563],
+            [-101.7310799,22.591186]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 7" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-96.295631,19.448514],
+            [-97.119606,19.168569],
+            [-98.777111,19.194358],
+            [-98.606823,18.932167],
+            [-96.643017,18.539411],
+            [-96.285961,18.103985],
+            [-95.11317,17.968181],
+            [-94.679211,17.772126],
+            [-94.311168,18.169238],
+            [-94.492443,18.14836],
+            [-94.59956,18.200551],
+            [-94.605053,18.281416],
+            [-94.701183,18.367458],
+            [-94.794567,18.542015],
+            [-94.989574,18.568053],
+            [-95.028026,18.6045],
+            [-95.176342,18.703387],
+            [-95.448254,18.698184],
+            [-95.678966,18.742406],
+            [-95.920666,18.882798],
+            [-95.948131,19.054228],
+            [-96.003063,19.04644],
+            [-96.079967,19.108738],
+            [-96.11018,19.199546],
+            [-96.299694,19.331777],
+            [-96.295631,19.448514]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 8" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-94.311168,18.169238],
+            [-94.679211,17.772126],
+            [-94.808446,17.648203],
+            [-94.785349,17.365413],
+            [-94.286699,17.249023],
+            [-93.846018,17.184448],
+            [-92.90394,16.870246],
+            [-91.862986,17.227365],
+            [-91.743364,18.055131],
+            [-92.813074,18.473079],
+            [-92.994578,18.432697],
+            [-93.200571,18.437908],
+            [-93.439524,18.432697],
+            [-94.311168,18.169238]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 9" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-95.351145,16.071247],
+            [-95.167124,16.168874],
+            [-95.068247,16.179426],
+            [-94.878733,16.211077],
+            [-94.675486,16.19789],
+            [-94.538157,16.182064],
+            [-93.846018,17.184448],
+            [-94.286699,17.249023],
+            [-94.785349,17.365413],
+            [-94.922678,17.066331],
+            [-95.653269,16.160961],
+            [-95.702708,15.875847],
+            [-95.461008,15.992054],
+            [-95.351145,16.071247]
+          ]]
+        }
+      }
+    ]
+  };
+
+  // ============================================================
+  //  3. CONFIGURACIÓN INICIAL Y MAPA
+  // ============================================================
+  const GNU_MADRE = { nombre: "GNU MADRE", lat: 19.7047816, lon: -101.244605 };
+
+  // ===== DATOS DE CLIENTES (con localStorage) =====
+  let rawData = window.CLIENTES_POTENCIALES || [];
+  const clientesGuardado = localStorage.getItem('CLIENTES_JS');
+  if (clientesGuardado) {
+    try {
+      eval(clientesGuardado);
+      rawData = window.CLIENTES_POTENCIALES || [];
+      console.log('✅ Clientes cargados desde localStorage');
+    } catch (e) { console.warn('Error al evaluar CLIENTES_JS:', e); }
+  }
+  let stations = deduplicate(rawData);
+  stations.forEach(s => {
+    s.distKm = distanciaKm(GNU_MADRE.lat, GNU_MADRE.lon, s.lat, s.lon);
+    const r = getDistRange(s.distKm);
+    s.priceKey = r.key;
+    s.priceColor = r.color;
+    s.priceLabel = r.label;
+  });
+
+  // ============================================================
+  //  4. MAPA, CAPAS BASE Y MAPBOX
+  // ============================================================
+  const map = L.map('map', { zoomControl: true }).setView([23.5, -102.5], 5);
+
+  // --- Capas gratuitas (siempre disponibles, sin token) ---
+  const freeLayers = {
+    "🗺️ Calles (CARTO)": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap · © CARTO', subdomains: 'abcd', maxZoom: 19
+    }),
+    "🛰️ Satélite (Esri)": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri', maxZoom: 19
+    }),
+    "🌙 Oscuro (CARTO)": L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap · © CARTO', subdomains: 'abcd', maxZoom: 19
+    })
+  };
+
+  // --- Construir capas de Mapbox (solo si hay token) ---
+  function buildMapboxLayers(token) {
+    if (!token) return {};
+    const mb = (style, label) => L.tileLayer(
+      `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/{z}/{x}/{y}?access_token=${token}`, {
+        tileSize: 512, zoomOffset: -1, maxZoom: 20,
+        attribution: '© Mapbox © OpenStreetMap'
+      }
+    );
+    return {
+      "🗺️ Mapbox Calles":    mb('streets-v12',          'Calles'),
+      "🛰️ Mapbox Satélite":  mb('satellite-streets-v12','Satélite'),
+      "🌙 Mapbox Oscuro":     mb('dark-v11',             'Oscuro'),
+      "🏔️ Mapbox Exterior":   mb('outdoors-v12',         'Exterior'),
+      "💡 Mapbox Claro":      mb('light-v11',            'Claro')
+    };
+  }
+
+  // --- Estado de capas ---
+  let layerControl = null;
+  let currentToken = localStorage.getItem('MAPBOX_TOKEN') || '';
+
+  function initBaseLayers(token) {
+    if (layerControl) { map.removeControl(layerControl); layerControl = null; }
+
+    const mapboxLayers = buildMapboxLayers(token);
+    const allLayers = { ...mapboxLayers, ...freeLayers };
+
+    let activeFound = false;
+    map.eachLayer(l => { if (l._url) activeFound = true; });
+
+    if (!activeFound) {
+      const firstKey = Object.keys(allLayers)[0];
+      allLayers[firstKey].addTo(map);
+    }
+
+    layerControl = L.control.layers(allLayers).addTo(map);
+
+    const gearBtn = document.getElementById('mapboxGearBtn');
+    if (token) {
+      gearBtn.innerHTML = '<i class="fas fa-layer-group"></i> Mapbox <span class="dot-active"></span>';
+      gearBtn.title = 'Mapbox activo — clic para configurar';
+    } else {
+      gearBtn.innerHTML = '<i class="fas fa-layer-group"></i> Mapbox';
+      gearBtn.title = 'Configurar token Mapbox';
+    }
+  }
+
+  // --- Validar token contra la API de Mapbox ---
+  async function validateToken(token) {
+    try {
+      const resp = await fetch(`https://api.mapbox.com/styles/v1/mapbox/streets-v12?access_token=${token}`);
+      return resp.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  // --- Lógica del modal ---
+  const overlay   = document.getElementById('tokenOverlay');
+  const tokenIn   = document.getElementById('tokenInput');
+  const saveBtn   = document.getElementById('tokenSaveBtn');
+  const skipBtn   = document.getElementById('tokenSkipBtn');
+  const removeBtn = document.getElementById('tokenRemoveBtn');
+  const statusEl  = document.getElementById('tokenStatus');
+
+  function showTokenModal() {
+    tokenIn.value = currentToken;
+    tokenIn.classList.remove('error');
+    statusEl.innerHTML = '';
+    removeBtn.classList.toggle('hidden', !currentToken);
+    overlay.classList.add('visible');
+    setTimeout(() => tokenIn.focus(), 200);
+  }
+  function hideTokenModal() {
+    overlay.classList.remove('visible');
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    const t = tokenIn.value.trim();
+    if (!t) { tokenIn.classList.add('error'); return; }
+    tokenIn.classList.remove('error');
+    saveBtn.textContent = 'Validando…';
+    saveBtn.disabled = true;
+
+    const valid = await validateToken(t);
+    saveBtn.textContent = 'Guardar';
+    saveBtn.disabled = false;
+
+    if (valid) {
+      currentToken = t;
+      localStorage.setItem('MAPBOX_TOKEN', t);
+      statusEl.innerHTML = '<div class="status ok">✓ Token válido — capas de Mapbox activadas</div>';
+      map.eachLayer(l => { if (l._url) map.removeLayer(l); });
+      initBaseLayers(currentToken);
+      setTimeout(hideTokenModal, 800);
+    } else {
+      statusEl.innerHTML = '<div class="status err">✗ Token inválido — verifica y vuelve a intentar</div>';
+      tokenIn.classList.add('error');
+    }
+  });
+
+  tokenIn.addEventListener('keydown', e => { if (e.key === 'Enter') saveBtn.click(); });
+
+  skipBtn.addEventListener('click', () => {
+    hideTokenModal();
+    if (!currentToken) initBaseLayers('');
+  });
+
+  removeBtn.addEventListener('click', () => {
+    currentToken = '';
+    localStorage.removeItem('MAPBOX_TOKEN');
+    tokenIn.value = '';
+    statusEl.innerHTML = '<div class="status err">Token eliminado — usando capas gratuitas</div>';
+    map.eachLayer(l => { if (l._url) map.removeLayer(l); });
+    initBaseLayers('');
+    removeBtn.classList.add('hidden');
+  });
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) hideTokenModal(); });
+
+  document.getElementById('mapboxGearBtn').addEventListener('click', showTokenModal);
+
+  // --- Inicialización ---
+  if (currentToken) {
+    initBaseLayers(currentToken);
+  } else {
+    initBaseLayers('');
+  }
+
+  L.control.scale({ position: 'bottomleft', metric: true, imperial: false }).addTo(map);
+
+  // ============================================================
+  //  5. DUCTOS (con filtro iterativo, tipos únicos y toggle)
+  // ============================================================
+  const DUCTO_ESTILOS = {
+    "CENAGAS (existente)":    { color: "#FF6B35", forma: "rombo",     dash: null },
+    "Gasoducto privado":      { color: "#3B82F6", forma: "cuadrado",  dash: null },
+    "Interconexión frontera": { color: "#10B981", forma: "triangulo", dash: null },
+    "Hub / Terminal":         { color: "#0EA5E9", forma: "estrella",  dash: null },
+    "En desarrollo":          { color: "#F59E0B", forma: "circulo",   dash: "6 5" },
+    "En construcción":        { color: "#8B5CF6", forma: "hexagono",  dash: "10 4" }
+  };
+  const DUCTO_DEFAULT = { color: "#95a5a6", forma: "circulo", dash: null };
+
+  function obtenerClaveEstilo(tipoReal) {
+    const t = tipoReal.trim().toLowerCase();
+    for (const [clave, _] of Object.entries(DUCTO_ESTILOS)) {
+      if (clave.toLowerCase() === t) return clave;
+    }
+    if (t.includes('cenagas') || t.includes('existente')) return 'CENAGAS (existente)';
+    if (t.includes('privado') || t.includes('privada')) return 'Gasoducto privado';
+    if (t.includes('frontera') || t.includes('interconexión')) return 'Interconexión frontera';
+    if (t.includes('hub') || t.includes('terminal')) return 'Hub / Terminal';
+    if (t.includes('desarrollo') || t.includes('planeación')) return 'En desarrollo';
+    if (t.includes('construcción') || t.includes('construccion')) return 'En construcción';
+    return null;
+  }
+
+  function ductoIconSVG(color, forma, size = 24) {
+    const bd = '#1e293b', w = 1.8;
+    const s = size, c = size/2;
+    const formas = {
+      rombo:     `<polygon points="${c},2 ${s-2},${c} ${c},${s-2} 2,${c}" fill="${color}" stroke="${bd}" stroke-width="${w}"/>`,
+      cuadrado:  `<rect x="3" y="3" width="${s-6}" height="${s-6}" rx="3" fill="${color}" stroke="${bd}" stroke-width="${w}"/>`,
+      triangulo: `<polygon points="${c},2 ${s-2},${s-2} 2,${s-2}" fill="${color}" stroke="${bd}" stroke-width="${w}" stroke-linejoin="round"/>`,
+      estrella:  `<polygon points="${c},2 ${c+4},${c-2} ${s-2},${c-4} ${c+6},${c+2} ${s-2},${s-2} ${c},${c+6} 2,${s-2} ${c-6},${c+2} 2,${c-4} ${c-4},${c-2}" fill="${color}" stroke="${bd}" stroke-width="${w}" stroke-linejoin="round"/>`,
+      circulo:   `<circle cx="${c}" cy="${c}" r="${s/2-3}" fill="${color}" stroke="${bd}" stroke-width="${w}" stroke-dasharray="3 2"/>`,
+      hexagono:  `<polygon points="${c},2 ${s-4},${c-3} ${s-4},${c+3} ${c},${s-2} 4,${c+3} 4,${c-3}" fill="${color}" stroke="${bd}" stroke-width="${w}" stroke-linejoin="round"/>`
+    };
+    return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.3));">${formas[forma] || formas.circulo}</svg>`;
+  }
+
+  function ductoPopup(p) {
+    const fila = (et, v) => v ? `<br><span style="color:#64748b;">${et}:</span> ${v}` : '';
+    return `<strong style="color:var(--primary);">${p.nombre || "Ducto"}</strong>
+      <br><span style="color:#64748b;">Tipo:</span> ${p.tipo || "N/A"}`
+      + fila('Permisionario', p.permisionario) + fila('Consorcio', p.consorcio)
+      + fila('Capacidad', p.capacidad ? p.capacidad + ' MMpcd' : '')
+      + fila('Longitud', p.longitud_km ? p.longitud_km + ' km' : '')
+      + fila('Permiso', p.permiso) + fila('Inicio op.', p.inicio_op) + fila('Tramo', p.tramo);
+  }
+
+  let ductosLayer = null;
+  let ductosVisibles = true;
+
+  // ---- Estado del filtro iterativo ----
+  const ductoFiltroIteracion = {};
+  let ultimoTipoSeleccionado = null;
+
+  // ---- Obtener tipos únicos (normalizados, sin "Desconocido") ----
+  function obtenerTiposUnicos(datos) {
+    const mapTipos = new Map();
+    datos.features.forEach(f => {
+      const tipoOriginal = f.properties.Tipo || f.properties.tipo || 'Desconocido';
+      let tipoNormalizado = tipoOriginal.trim();
+      const lower = tipoNormalizado.toLowerCase();
+      if (lower.includes('cenagas') && lower.includes('existente')) {
+        tipoNormalizado = 'Gasoductos existentes operados por CENAGAS';
+      }
+      if (lower === 'desconocido') return;
+      const clave = tipoNormalizado.toLowerCase();
+      if (!mapTipos.has(clave)) {
+        mapTipos.set(clave, tipoNormalizado);
+      }
+    });
+    return Array.from(mapTipos.values()).sort((a,b) => a.localeCompare(b));
+  }
+
+  // ---- Poblar el <select> ----
+  function poblarFiltroDuctos(datos) {
+    const select = document.getElementById('ductoFilter');
+    while (select.options.length > 1) select.remove(1);
+    const tipos = obtenerTiposUnicos(datos);
+    console.log(`🔍 Tipos de ductos encontrados: ${tipos.length}`, tipos);
+    tipos.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      select.appendChild(opt);
+    });
+    select.value = 'all';
+    for (const key in ductoFiltroIteracion) delete ductoFiltroIteracion[key];
+    ultimoTipoSeleccionado = null;
+  }
+
+  // ---- Actualizar leyenda ----
+  function actualizarLeyendaDuctos(datos) {
+    const legendDiv = document.querySelector('.ducto-legend');
+    if (!legendDiv) return;
+    const tipos = obtenerTiposUnicos(datos);
+    let html = `
+      <div class="title">
+        <span>Ductos</span>
+        <button class="reset-btn" id="ductoResetBtn" title="Ver todos los ductos">✕</button>
+      </div>
+    `;
+    tipos.forEach(tipo => {
+      const clave = obtenerClaveEstilo(tipo);
+      const e = clave ? DUCTO_ESTILOS[clave] : DUCTO_DEFAULT;
+      html += `
+        <div class="row" data-tipo="${tipo}">
+          <span class="swatch">${ductoIconSVG(e.color, e.forma, 18)}</span>
+          <span class="line" style="background:${e.color};${e.dash ? 'background-image:repeating-linear-gradient(90deg,'+e.color+' 0 4px,transparent 4px 7px);background-color:transparent;' : ''}"></span>
+          <span>${tipo}</span>
+        </div>
+      `;
+    });
+    legendDiv.innerHTML = html;
+    legendDiv.querySelectorAll('.row').forEach(row => {
+      row.addEventListener('click', function() {
+        const tipo = this.dataset.tipo;
+        document.getElementById('ductoFilter').value = tipo;
+        aplicarFiltroIterativo(tipo);
+      });
+    });
+    const resetBtn = legendDiv.querySelector('#ductoResetBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('ductoFilter').value = 'all';
+        aplicarFiltroIterativo('all');
+        map.flyTo([23.5, -102.5], 5, { duration: 1 });
+      });
+    }
+  }
+
+  // ---- Aplicar filtro iterativo ----
+  function aplicarFiltroIterativo(tipo) {
+    if (tipo === 'all') {
+      for (const key in ductoFiltroIteracion) delete ductoFiltroIteracion[key];
+      ultimoTipoSeleccionado = null;
+      filtrarDuctos('all', 0);
+      map.flyTo([23.5, -102.5], 5, { duration: 1 });
+      document.querySelectorAll('.ducto-legend .row').forEach(row => row.classList.remove('active'));
+      return;
+    }
+
+    const tipoNorm = tipo.trim();
+    if (ultimoTipoSeleccionado !== tipoNorm) {
+      ductoFiltroIteracion[tipoNorm] = 0;
+      ultimoTipoSeleccionado = tipoNorm;
+    } else {
+      if (!(tipoNorm in ductoFiltroIteracion)) ductoFiltroIteracion[tipoNorm] = 0;
+      ductoFiltroIteracion[tipoNorm]++;
+    }
+
+    let index = ductoFiltroIteracion[tipoNorm];
+    const ductosDelTipo = ductosData.features.filter(f => {
+      const t = f.properties.Tipo || f.properties.tipo || 'Desconocido';
+      return t.trim().toLowerCase() === tipoNorm.toLowerCase();
+    });
+    const total = ductosDelTipo.length;
+    if (total === 0) return;
+
+    if (index > total) {
+      index = 0;
+      ductoFiltroIteracion[tipoNorm] = 0;
+    }
+
+    filtrarDuctos(tipoNorm, index);
+
+    if (index === 0) {
+      centrarEnDuctos(tipoNorm);
+    } else {
+      const ducto = ductosDelTipo[index - 1];
+      if (ducto) {
+        const coords = ducto.geometry.coordinates;
+        const latLngs = coords.map(c => [c[1], c[0]]);
+        const bounds = L.latLngBounds(latLngs);
+        map.flyToBounds(bounds, { padding: [40, 40], duration: 1 });
+      }
+    }
+
+    document.getElementById('ductoFilter').value = tipo;
+    document.querySelectorAll('.ducto-legend .row').forEach(row => {
+      const rowTipo = row.dataset.tipo;
+      if (rowTipo && rowTipo.trim().toLowerCase() === tipoNorm.toLowerCase()) {
+        row.classList.add('active');
+      } else {
+        row.classList.remove('active');
+      }
+    });
+  }
+
+  // ---- Filtrar ductos (visibilidad) ----
+  function filtrarDuctos(tipoSeleccionado, index) {
+    if (!ductosLayer) return;
+    const tipoNorm = tipoSeleccionado.trim().toLowerCase();
+
+    let layersDelTipo = [];
+    if (index > 0) {
+      ductosLayer.eachLayer(function(layer) {
+        const props = layer.feature ? layer.feature.properties : {};
+        const tipoFeature = (props.tipo || "CENAGAS (existente)").trim().toLowerCase();
+        if (tipoFeature === tipoNorm) {
+          layersDelTipo.push(layer);
+        }
+      });
+      const orderMap = {};
+      ductosData.features.forEach((f, i) => {
+        const t = (f.properties.Tipo || f.properties.tipo || 'Desconocido').trim().toLowerCase();
+        if (t === tipoNorm) {
+          const nombre = f.properties.nombre || '';
+          orderMap[nombre] = i;
+        }
+      });
+      layersDelTipo.sort((a, b) => {
+        const nameA = a.feature ? a.feature.properties.nombre || '' : '';
+        const nameB = b.feature ? b.feature.properties.nombre || '' : '';
+        return (orderMap[nameA] || 0) - (orderMap[nameB] || 0);
+      });
+    }
+
+    ductosLayer.eachLayer(function(layer) {
+      const props = layer.feature ? layer.feature.properties : {};
+      const tipoFeature = (props.tipo || "CENAGAS (existente)").trim().toLowerCase();
+      let visible = false;
+      if (tipoNorm === 'all') {
+        visible = true;
+      } else if (tipoFeature === tipoNorm) {
+        if (index === 0) {
+          visible = true;
+        } else {
+          const pos = layersDelTipo.indexOf(layer);
+          visible = (pos === index - 1);
+        }
+      } else {
+        visible = false;
+      }
+      if (typeof layer.setStyle === 'function') {
+        layer.setStyle({ opacity: visible ? 0.85 : 0.05, weight: visible ? 3 : 1 });
+      } else if (typeof layer.setOpacity === 'function') {
+        layer.setOpacity(visible ? 1 : 0.1);
+      }
+    });
+  }
+
+  // ---- Centrar en ductos de un tipo ----
+  function centrarEnDuctos(tipo) {
+    if (!ductosLayer || !ductosLayer.getLayers().length) {
+      alert('No hay ductos cargados.');
+      return;
+    }
+    const bounds = new L.LatLngBounds();
+    let encontrados = 0;
+    const tipoNorm = tipo.trim().toLowerCase();
+    ductosLayer.eachLayer(function(layer) {
+      const props = layer.feature ? layer.feature.properties : {};
+      const tipoFeature = (props.tipo || "CENAGAS (existente)").trim().toLowerCase();
+      if (tipoNorm === 'all' || tipoFeature === tipoNorm) {
+        try {
+          const latlngs = layer.getLatLngs ? layer.getLatLngs() : [layer.getLatLng()];
+          if (Array.isArray(latlngs)) {
+            latlngs.forEach(ll => {
+              if (Array.isArray(ll)) {
+                ll.forEach(p => bounds.extend(p));
+              } else if (ll.lat && ll.lng) {
+                bounds.extend(ll);
+              }
+            });
+          } else if (latlngs.lat && latlngs.lng) {
+            bounds.extend(latlngs);
+          }
+          encontrados++;
+        } catch (e) {}
+      }
+    });
+    if (encontrados === 0) {
+      alert(`No se encontraron ductos del tipo "${tipo}".`);
+      return;
+    }
+    if (bounds.isValid()) {
+      map.flyToBounds(bounds, { padding: [60, 60], duration: 1.2 });
+    }
+  }
+
+  // ---- Crear la capa de ductos ----
+  function crearCapaDuctos(datos) {
+    if (ductosLayer) {
+      map.removeLayer(ductosLayer);
+      ductosLayer = null;
+    }
+    if (!datos || !datos.features || datos.features.length === 0) {
+      ductosLayer = L.layerGroup().addTo(map);
+      return;
+    }
+    try {
+      ductosLayer = L.geoJSON(datos, {
+        style: function(feature) {
+          const tipoReal = feature.properties.tipo || "CENAGAS (existente)";
+          const clave = obtenerClaveEstilo(tipoReal);
+          const e = clave ? DUCTO_ESTILOS[clave] : DUCTO_DEFAULT;
+          return { color: e.color, weight: 3, opacity: 0.85, dashArray: e.dash };
+        },
+        pointToLayer: function(feature, latlng) {
+          const tipoReal = feature.properties.tipo || "CENAGAS (existente)";
+          const clave = obtenerClaveEstilo(tipoReal);
+          const e = clave ? DUCTO_ESTILOS[clave] : DUCTO_DEFAULT;
+          return L.marker(latlng, {
+            icon: L.divIcon({
+              className: 'ducto-pin',
+              html: ductoIconSVG(e.color, e.forma, 26),
+              iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -13]
+            }),
+            zIndexOffset: -500,
+            title: feature.properties.nombre || 'Ducto'
+          });
+        },
+        onEachFeature: function(feature, layer) {
+          layer.feature = feature;
+          layer.bindPopup(ductoPopup(feature.properties), { maxWidth: 280 });
+        }
+      }).addTo(map);
+      console.log(`✅ Capa de ductos creada: ${datos.features.length} ductos.`);
+    } catch (e) {
+      console.warn('⚠️ Error al crear capa de ductos:', e);
+      ductosLayer = L.layerGroup().addTo(map);
+    }
+  }
+
+  // ---- AÑADIR LEYENDA DE DUCTOS (control Leaflet) ----
+  function agregarLeyendaDuctos() {
+    const control = L.control({ position: 'bottomleft' });
+    control.onAdd = function() {
+      const div = L.DomUtil.create('div', 'ducto-legend');
+      div.innerHTML = `
+        <div class="title">
+          <span>Ductos</span>
+          <button class="reset-btn" id="ductoResetBtn" title="Ver todos los ductos">✕</button>
+        </div>
+      `;
+      setTimeout(() => actualizarLeyendaDuctos(ductosData), 50);
+      return div;
+    };
+    control.addTo(map);
+    console.log('✅ Leyenda de ductos añadida al mapa.');
+  }
+
+  // ---- Centrar en todos los ductos (usando ductosData) ----
+  function centrarEnTodosDuctos() {
+    if (!ductosData || ductosData.features.length === 0) {
+      map.flyTo([23.5, -102.5], 5);
+      return;
+    }
+    const bounds = new L.LatLngBounds();
+    ductosData.features.forEach(f => {
+      const coords = f.geometry.coordinates;
+      if (coords && coords.length) {
+        coords.forEach(coord => {
+          bounds.extend([coord[1], coord[0]]);
+        });
+      }
+    });
+    if (bounds.isValid()) {
+      map.flyToBounds(bounds, { padding: [60, 60], duration: 1.2 });
+    } else {
+      map.flyTo([23.5, -102.5], 5);
+    }
+  }
+
+  // ---- Toggle de visibilidad de ductos ----
+  function toggleDuctos() {
+    if (ductosVisibles) {
+      if (ductosLayer) map.removeLayer(ductosLayer);
+      ductosVisibles = false;
+      document.getElementById('ductosToggleIcon').className = 'fas fa-eye-slash';
+      document.getElementById('ductosToggleLabel').textContent = 'Mostrar ductos';
+    } else {
+      if (ductosLayer) map.addLayer(ductosLayer);
+      ductosVisibles = true;
+      document.getElementById('ductosToggleIcon').className = 'fas fa-eye';
+      document.getElementById('ductosToggleLabel').textContent = 'Ocultar ductos';
+    }
+  }
+
+  // ---- Inicializar ductos ----
+  crearCapaDuctos(ductosData);
+  poblarFiltroDuctos(ductosData);
+  agregarLeyendaDuctos();
+
+  // ---- Evento del <select> ----
+  document.getElementById('ductoFilter').addEventListener('change', function() {
+    const tipo = this.value;
+    aplicarFiltroIterativo(tipo);
+  });
+
+  // ---- Recarga de ductos (desde localStorage) ----
+  function recargarDuctos() {
+    const nuevoJS = localStorage.getItem('DUCTOS_JS');
+    if (!nuevoJS) return;
+    try {
+      eval(nuevoJS);
+      if (window.DUCTOS && Array.isArray(window.DUCTOS)) {
+        const geojson = convertirArrayAGeoJSON(window.DUCTOS);
+        ductosData = geojson;
+        window.DUCTOS_GAS = geojson;
+        crearCapaDuctos(ductosData);
+        poblarFiltroDuctos(ductosData);
+        actualizarLeyendaDuctos(ductosData);
+        document.getElementById('ductoFilter').value = 'all';
+        for (const key in ductoFiltroIteracion) delete ductoFiltroIteracion[key];
+        ultimoTipoSeleccionado = null;
+        aplicarFiltroIterativo('all');
+        if (!ductosVisibles && ductosLayer) {
+          map.removeLayer(ductosLayer);
+        }
+      }
+    } catch (e) {
+      console.error('Error al recargar ductos:', e);
+    }
+  }
+
+  // ============================================================
+  //  6. ZONAS DE REGIONALIZACIÓN (fijas)
+  // ============================================================
+  const ZONAS = window.ZONAS || { type: "FeatureCollection", features: [] };
+  const zonaSelect = document.getElementById('zonaFilter');
+  while (zonaSelect.options.length > 1) zonaSelect.remove(1);
+  const zonasNombres = [...new Set(ZONAS.features.map(f => f.properties.nombre))].sort();
+  zonasNombres.forEach(z => {
+    const opt = document.createElement('option');
+    opt.value = z;
+    opt.textContent = z;
+    zonaSelect.appendChild(opt);
+  });
+  const zonasLayer = L.geoJSON(ZONAS, {
+    style: function(feature) {
+      return { color: '#1F5CA9', weight: 2, opacity: 0.6, fillColor: '#27BFF0', fillOpacity: 0.15 };
+    },
+    onEachFeature: function(feature, layer) {
+      layer.bindPopup(`<strong>${feature.properties.nombre}</strong>`);
+    }
+  }).addTo(map);
+  zonaSelect.addEventListener('change', function() {
+    const nombreSeleccionado = this.value;
+    zonasLayer.eachLayer(layer => {
+      const nombre = layer.feature.properties.nombre;
+      const coincide = (nombreSeleccionado === 'all' || nombre === nombreSeleccionado);
+      layer.setStyle({ opacity: coincide ? 0.6 : 0, fillOpacity: coincide ? 0.15 : 0 });
+    });
+  });
+
+  // ============================================================
+  //  7. CLÚSTER Y MARCADORES DE CLIENTES (dinámicos)
+  // ============================================================
+  const cluster = L.markerClusterGroup({
+    maxClusterRadius: 50,
+    iconCreateFunction: function(c) {
+      const n = c.getChildCount();
+      const s = n < 10 ? 38 : n < 50 ? 46 : 54;
+      return L.divIcon({
+        html: `<div class="bubble" style="font-size:${n<100?12:11}px;">${n}</div>`,
+        className: 'gnv-cluster', iconSize: [s, s]
+      });
+    },
+    zoomToBoundsOnClick: true,
+    spiderfyOnMaxZoom: true,
+    removeOutsideVisibleBounds: true
+  });
+  map.addLayer(cluster);
+  const markerMap = new Map();
+
+  // Marcador fijo de GNU MADRE
+  L.marker([GNU_MADRE.lat, GNU_MADRE.lon], {
+    icon: L.divIcon({ className: '', iconSize: [44,44], iconAnchor: [22,40],
+      html: `<div style="font-size:34px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));">⭐</div>` }),
+    zIndexOffset: 1000, title: 'GNU MADRE'
+  }).addTo(map).bindPopup('<strong style="color:var(--primary);">⭐ GNU MADRE</strong><br><span style="font-size:.8rem;color:#64748b;">Estación de referencia — las distancias se miden desde aquí</span>');
+
+  function pinSVG(color) {
+    return `<svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 3px 4px rgba(0,0,0,0.2));">
+      <path d="M14 0 C6.27 0 0 6.27 0 14 C0 24.5 14 40 14 40 S28 24.5 28 14 C28 6.27 21.73 0 14 0 Z" fill="${color}" stroke="#1e293b" stroke-width="1.2"/>
+      <circle cx="14" cy="14" r="5" fill="white" stroke="#1e293b" stroke-width="1"/>
+    </svg>`;
+  }
+
+  function reconstruirMarcadoresClientes() {
+    cluster.clearLayers();
+    markerMap.clear();
+    stations.forEach(s => {
+      s.distKm = distanciaKm(GNU_MADRE.lat, GNU_MADRE.lon, s.lat, s.lon);
+      const r = getDistRange(s.distKm);
+      s.priceKey = r.key;
+      s.priceColor = r.color;
+      s.priceLabel = r.label;
+    });
+    stations.forEach(s => {
+      const marker = L.marker([s.lat, s.lon], {
+        icon: L.divIcon({ className: '', html: pinSVG(s.priceColor), iconSize: [28,40], iconAnchor: [14,40], popupAnchor: [0,-37] }),
+        title: s.nombre
+      });
+      marker.bindPopup(() => {
+        const d = s.distKm < 10 ? s.distKm.toFixed(1) : Math.round(s.distKm);
+        return `<div style="padding:0.2rem;">
+          <strong style="font-size:1.05rem;color:var(--primary);">${s.nombre}</strong><br>
+          <span style="color:var(--text-muted);font-size:0.8rem;">${s.estado || '...'}</span><br>
+          ${s.direccion ? `<span style="font-size:0.8rem;">📍 ${s.direccion}</span><br>` : ''}
+          ${s.telefono ? `<span style="font-size:0.8rem;">📞 ${s.telefono}</span><br>` : ''}
+          <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
+            <span style="display:block;width:10px;height:10px;border-radius:50%;background:${s.priceColor};"></span>
+            <span style="color:#0f172a;font-weight:600;">${d} km de GNU MADRE</span>
+          </div>
+          <a href="https://www.google.com/maps?q=${s.lat},${s.lon}" target="_blank" style="font-size:0.75rem;color:var(--primary);">Ver en Google Maps</a>
+          <button class="btn-route" data-lat="${s.lat}" data-lon="${s.lon}" style="display:block;margin-top:4px;background:var(--primary);color:#fff;border:none;border-radius:2rem;padding:0.2rem 0.6rem;font-size:0.7rem;cursor:pointer;">🚗 Calcular ruta</button>
+        </div>`;
+      }, { className: '', maxWidth: 260 });
+      marker.data = s;
+      markerMap.set(s, { marker, data: s });
+      cluster.addLayer(marker);
+    });
+    document.getElementById('rTotal').textContent = stations.length;
+  }
+  reconstruirMarcadoresClientes();
+
+  // ============================================================
+  //  8. RUTAS CON TOMTOM (soporta transporte pesado)
+  // ============================================================
+  const TOMTOM_KEY = 'hE0LeSxEFnphnPKlqM9MxAxeHneGaLEA'; // <-- REEMPLAZA CON TU CLAVE
+
+  async function calcularRuta(origenLat, origenLon, destinoLat, destinoLon, perfil = 'car') {
+    const travelMode = perfil === 'truck' ? 'truck' : 'car';
+    const url = `https://api.tomtom.com/routing/1/calculateRoute/${origenLat},${origenLon}:${destinoLat},${destinoLon}/json`;
+    const params = new URLSearchParams({
+      key: TOMTOM_KEY,
+      travelMode: travelMode,
+      routeType: 'fastest',
+      traffic: 'false'
+    });
+    if (perfil === 'truck') {
+      params.append('vehicleHeight', '4.2');
+      params.append('vehicleWeight', '40');
+    }
+    const fullUrl = `${url}?${params.toString()}`;
+    
+    console.log('🚀 Calculando ruta...', fullUrl);
+    console.log('📍 Origen:', origenLat, origenLon, '| Destino:', destinoLat, destinoLon);
+    
+    try {
+      const resp = await fetch(fullUrl);
+      console.log('📡 Respuesta TomTom:', resp.status, resp.statusText);
+      
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        console.error('❌ Error TomTom:', resp.status, errorText);
+        throw new Error(`TomTom error ${resp.status}: ${errorText}`);
+      }
+      const data = await resp.json();
+      console.log('✅ Datos recibidos:', data);
+      
+      if (!data.routes || !data.routes.length) {
+        console.warn('⚠️ Sin rutas en respuesta');
+        throw new Error('No se encontró una ruta válida');
+      }
+      const ruta = data.routes[0];
+      const leg = ruta.legs[0];
+      const points = leg.points.map(p => [p.latitude, p.longitude]);
+      console.log('📊 Ruta procesada:', points.length, 'puntos');
+      return {
+        distanciaKm: leg.summary.lengthInMeters / 1000,
+        duracionMin: leg.summary.travelTimeInSeconds / 60,
+        geometria: points
+      };
+    } catch (e) {
+      console.error('💥 Error calculando ruta:', e);
+      alert(`Error al calcular la ruta: ${e.message}`);
+      return null;
+    }
+  }
+
+  let rutaLayer = null;
+  let rutaMarcador = null;
+
+  function limpiarRuta() {
+    if (rutaLayer) { map.removeLayer(rutaLayer); rutaLayer = null; }
+    if (rutaMarcador) { map.removeLayer(rutaMarcador); rutaMarcador = null; }
+  }
+
+  // Evento delegado con stopPropagation
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-route');
+    if (btn) {
+      e.stopPropagation();
+      const lat = parseFloat(btn.dataset.lat);
+      const lon = parseFloat(btn.dataset.lon);
+      if (isNaN(lat) || isNaN(lon)) {
+        alert('Coordenadas inválidas');
+        return;
+      }
+      const perfil = document.getElementById('routeProfile')?.value || 'car';
+      mostrarRuta(lat, lon, perfil);
+    }
+  });
+
+  async function mostrarRuta(destLat, destLon, perfil = 'car') {
+    console.log('🗺️ mostrarRuta() iniciada para:', destLat, destLon);
+    
+    if (!map) {
+      console.error('❌ ERROR: El mapa no está inicializado');
+      alert('El mapa no está listo. Intenta de nuevo.');
+      return;
+    }
+    
+    limpiarRuta();
+    
+    console.log('⏳ Calculando ruta...');
+    const resultado = await calcularRuta(GNU_MADRE.lat, GNU_MADRE.lon, destLat, destLon, perfil);
+    
+    if (!resultado) {
+      console.error('❌ calcularRuta() retornó null');
+      alert('No se pudo calcular la ruta. Intenta de nuevo.');
+      return;
+    }
+    
+    console.log('✅ Ruta calculada:', resultado);
+    
+    try {
+      console.log('📍 Creando polyline con', resultado.geometria.length, 'puntos');
+      const coords = resultado.geometria.map(c => [c[0], c[1]]);
+      
+      console.log('🔴 Primeras coordenadas:', coords.slice(0, 3));
+      
+      rutaLayer = L.polyline(coords, {
+        color: '#1F5CA9',
+        weight: 4,
+        opacity: 0.8,
+        dashArray: '8,8'
+      }).addTo(map);
+      
+      console.log('🎯 Polyline añadido al mapa');
+      
+      const bounds = rutaLayer.getBounds();
+      console.log('📐 Bounds:', bounds);
+      
+      if (!bounds.isValid()) {
+        console.error('❌ Bounds inválidos, usando fallback');
+        map.setView([destLat, destLon], 10);
+      } else {
+        console.log('📍 Usando fitBounds');
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+      
+      rutaMarcador = L.marker([destLat, destLon], {
+        icon: L.divIcon({
+          className: '',
+          html: '<i class="fas fa-flag-checkered" style="font-size:28px;color:#1F5CA9;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>',
+          iconSize: [28, 28]
+        })
+      }).addTo(map);
+      
+      const perfilLabel = perfil === 'truck' ? '🚛 Transporte pesado' : '🚗 Automóvil';
+      rutaMarcador.bindPopup(`
+        <strong>Ruta desde GNU MADRE</strong><br>
+        Distancia: ${resultado.distanciaKm.toFixed(1)} km<br>
+        Tiempo estimado: ${Math.round(resultado.duracionMin)} min<br>
+        <span style="font-size:0.7rem;color:var(--text-muted);">Perfil: ${perfilLabel}</span>
+      `).openPopup();
+      
+      console.log('✅ mostrarRuta() completada exitosamente');
+      
+    } catch (err) {
+      console.error('💥 Error en mostrarRuta():', err);
+      console.error('Stack:', err.stack);
+      alert(`Error al mostrar ruta: ${err.message}`);
+    }
+  }
+
+  document.getElementById('clearRouteBtn').addEventListener('click', limpiarRuta);
+
+  // ============================================================
+  //  9. LEYENDA DE DISTANCIAS
+  // ============================================================
+  const legendControl = L.control({ position: 'bottomright' });
+  legendControl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'price-legend');
+    div.innerHTML = `<div class="title">Distancia a GNU MADRE <button class="clear-btn" id="legendClearBtn" title="Limpiar filtro">✕</button></div>`;
+    const ranges = [
+      { label: '≤ 100 km',     key: 'low',      color: '#10b981' },
+      { label: '100 – 140 km', key: 'mid',      color: '#f59e0b' },
+      { label: '140 – 180 km', key: 'high',     color: '#ef4444' },
+      { label: '> 180 km',     key: 'no-price', color: '#94a3b8' }
+    ];
+    ranges.forEach(r => {
+      const count = stations.filter(s => s.priceKey === r.key).length;
+      div.innerHTML += `<div class="row" data-key="${r.key}">
+        <span class="color-dot" style="background:${r.color};"></span>
+        <span class="label">${r.label}</span>
+        <span class="count">${count}</span>
+      </div>`;
+    });
+    return div;
+  };
+  legendControl.addTo(map);
+
+  // ============================================================
+  //  10. FILTROS Y EVENTOS (clientes)
+  // ============================================================
+  let activePrice = null, activeState = 'all', searchTerm = '', maxDist = 210;
+
+  function applyFilters() {
+    const term = searchTerm.toLowerCase(), st = document.getElementById('stateFilter').value;
+    const visible = stations.filter(s => 
+      (term === '' || s.nombre.toLowerCase().includes(term)) &&
+      (activePrice === null || s.priceKey === activePrice) &&
+      (st === 'all' || s.estado === st) &&
+      s.distKm <= maxDist
+    );
+
+    cluster.clearLayers();
+    visible.forEach(s => cluster.addLayer(markerMap.get(s).marker));
+    
+    document.getElementById('rMatch').textContent = visible.length;
+    document.getElementById('listCnt').textContent = visible.length;
+    renderList(visible);
+    updateLegendUI();
+    updateStats(visible);
+
+    document.getElementById('clearAllBtn').classList.toggle('hidden', !(activePrice || st !== 'all' || term || maxDist < 210));
+    return visible;
+  }
+
+  function updateLegendUI() {
+    document.querySelectorAll('.price-legend .row').forEach(row => {
+      row.classList.toggle('active', row.dataset.key === activePrice);
+    });
+  }
+
+  function updateStats(items) {
+    const statsEl = document.getElementById('stats');
+    if (items.length === 0) { statsEl.innerHTML = ''; return; }
+    const dists = items.map(s => s.distKm);
+    const min = Math.min(...dists);
+    const max = Math.max(...dists);
+    const avg = dists.reduce((a,b) => a+b, 0) / dists.length;
+    statsEl.innerHTML = `
+      <span class="stat">📏 Más cercano: ${min.toFixed(1)} km</span>
+      <span class="stat">📏 Más lejano: ${max.toFixed(1)} km</span>
+      <span class="stat">📊 Promedio: ${avg.toFixed(1)} km</span>
+    `;
+  }
+
+  setTimeout(() => {
+    const legend = document.querySelector('.price-legend');
+    if (legend) {
+      legend.addEventListener('click', e => {
+        if (e.target.closest('#legendClearBtn')) {
+          activePrice = null; applyFilters();
+          map.flyTo([23.5, -102.5], 5, { duration: 1 });
+          return;
+        }
+        const row = e.target.closest('.row');
+        if (row) {
+          activePrice = (activePrice === row.dataset.key) ? null : row.dataset.key;
+          const visibles = applyFilters();
+          if (activePrice) encuadrarClientes(visibles);
+          else map.flyTo([23.5, -102.5], 5, { duration: 1 });
+        }
+      });
+    }
+  }, 100);
+
+  function encuadrarClientes(lista) {
+    if (!lista || !lista.length) { 
+      map.flyTo([23.5, -102.5], 5, { duration: 1 });
+      return; 
+    }
+    const b = L.latLngBounds(lista.map(s => [s.lat, s.lon]));
+    b.extend([GNU_MADRE.lat, GNU_MADRE.lon]);
+    map.flyToBounds(b, { padding: [60, 60], duration: 1, maxZoom: 12 });
+  }
+
+  document.getElementById('stateFilter').addEventListener('change', applyFilters);
+  document.getElementById('distSlider').addEventListener('input', function() {
+    maxDist = parseInt(this.value);
+    document.getElementById('distLabel').textContent = maxDist + ' km';
+    applyFilters();
+  });
+
+  let debounceTimer;
+  document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { searchTerm = this.value; applyFilters(); }, 300);
+  });
+
+  document.getElementById('clearAllBtn').addEventListener('click', () => {
+    activePrice = null; searchTerm = '';
+    document.getElementById('stateFilter').value = 'all';
+    document.getElementById('searchInput').value = '';
+    maxDist = 210;
+    document.getElementById('distSlider').value = 210;
+    document.getElementById('distLabel').textContent = '210 km';
+    applyFilters();
+    map.flyTo([23.5, -102.5], 5, { duration: 1 });
+  });
+
+  // ============================================================
+  //  11. RENDERIZAR LISTA (directorio)
+  // ============================================================
+  function renderList(items) {
+    const ul = document.getElementById('list');
+    ul.innerHTML = '';
+    if (!items.length) { ul.innerHTML = '<li class="empty">No hay clientes que coincidan</li>'; return; }
+    const grouped = items.reduce((acc, s) => {
+      const state = s.estado || 'Desconocido';
+      if (!acc[state]) acc[state] = [];
+      acc[state].push(s);
+      return acc;
+    }, {});
+    const frag = document.createDocumentFragment();
+    Object.keys(grouped).sort().forEach(state => {
+      const header = document.createElement('li');
+      header.className = 'group-header';
+      header.textContent = `${state} (${grouped[state].length})`;
+      frag.appendChild(header);
+      grouped[state].sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(s => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="top-row">
+            <span class="name">${s.nombre}</span>
+            <span class="dist">${s.distKm < 10 ? s.distKm.toFixed(1) : Math.round(s.distKm)} km</span>
+          </div>
+          <span class="state-tag">${s.estado || '...'}</span>
+        `;
+        li.onclick = () => { 
+          map.flyTo([s.lat, s.lon], 14); 
+          markerMap.get(s).marker.openPopup(); 
+        };
+        frag.appendChild(li);
+      });
+    });
+    ul.appendChild(frag);
+  }
+
+  // ============================================================
+  //  12. CONTROLES ADICIONALES
+  // ============================================================
+  document.getElementById('resetBtn').addEventListener('click', () => map.flyTo([23.5, -102.5], 5, { duration: 1 }));
+  document.getElementById('centerGnuBtn').addEventListener('click', () => {
+    map.flyTo([GNU_MADRE.lat, GNU_MADRE.lon], 9, { duration: 1.2 });
+    limpiarRuta();
+  });
+
+  document.getElementById('toggleRailBtn').addEventListener('click', () => {
+    const rail = document.getElementById('railPanel');
+    rail.classList.toggle('hidden');
+    document.getElementById('railToggleIcon').className = rail.classList.contains('hidden') ? 'fas fa-chevron-left' : 'fas fa-chevron-right';
+    setTimeout(() => map.invalidateSize(), 300);
+  });
+
+  // ---- Eventos para los nuevos botones ----
+  document.getElementById('toggleDuctosBtn').addEventListener('click', toggleDuctos);
+  document.getElementById('centerDuctosBtn').addEventListener('click', centrarEnTodosDuctos);
+
+  document.getElementById('exportBtn').addEventListener('click', function() {
+    const visible = stations.filter(s => {
+      const term = searchTerm.toLowerCase();
+      const st = document.getElementById('stateFilter').value;
+      const matchState = (st === 'all' || s.estado === st);
+      const matchSearch = (term === '' || s.nombre.toLowerCase().includes(term));
+      const matchPrice = (activePrice === null || s.priceKey === activePrice);
+      const matchDist = s.distKm <= maxDist;
+      return matchState && matchSearch && matchPrice && matchDist;
+    });
+    if (visible.length === 0) { alert('No hay clientes visibles para exportar.'); return; }
+    let csv = 'Nombre,Estado,Distancia (km),Dirección,Teléfono\n';
+    visible.forEach(s => {
+      csv += `"${s.nombre}","${s.estado||''}",${s.distKm.toFixed(2)},"${s.direccion||''}","${s.telefono||''}"\n`;
+    });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'clientes_potenciales.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Geolocalización
+  const locBtn = document.getElementById('locBtn');
+  let locMarker, locCircle;
+  locBtn.addEventListener('click', () => {
+    if (locMarker) { map.removeLayer(locMarker); map.removeLayer(locCircle); locMarker=null; map.flyTo([23.5, -102.5], 5, { duration: 1 }); return; }
+    if (!navigator.geolocation) return alert('Geolocalización no soportada.');
+    locBtn.classList.add('loading');
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      map.flyTo([latitude, longitude], 13);
+      locMarker = L.marker([latitude, longitude], { icon: L.divIcon({ className: 'location-marker', html: '<div class="dot"></div>', iconSize: [18,18] }) }).addTo(map);
+      locCircle = L.circle([latitude, longitude], { radius: accuracy, color: 'var(--secondary)', weight: 1 }).addTo(map);
+      locBtn.classList.remove('loading');
+    }, () => { alert('No se pudo obtener la ubicación.'); locBtn.classList.remove('loading'); });
+  });
+
+  // ============================================================
+  //  13. RECARGA DE CLIENTES
+  // ============================================================
+  function recargarClientes() {
+    const nuevoJS = localStorage.getItem('CLIENTES_JS');
+    if (!nuevoJS) return;
+    try {
+      eval(nuevoJS);
+      const nuevos = window.CLIENTES_POTENCIALES || [];
+      stations.length = 0;
+      stations.push(...deduplicate(nuevos));
+      stations.forEach(s => {
+        s.distKm = distanciaKm(GNU_MADRE.lat, GNU_MADRE.lon, s.lat, s.lon);
+        const r = getDistRange(s.distKm);
+        s.priceKey = r.key;
+        s.priceColor = r.color;
+        s.priceLabel = r.label;
+      });
+      reconstruirMarcadoresClientes();
+      const select = document.getElementById('stateFilter');
+      while (select.options.length > 1) select.remove(1);
+      const states = [...new Set(stations.map(s => s.estado).filter(Boolean))].sort();
+      states.forEach(st => select.appendChild(new Option(st, st)));
+      select.value = 'all';
+      const legend = document.querySelector('.price-legend');
+      if (legend) {
+        const ranges = [
+          { key: 'low', label: '≤ 100 km' },
+          { key: 'mid', label: '100 – 140 km' },
+          { key: 'high', label: '140 – 180 km' },
+          { key: 'no-price', label: '> 180 km' }
+        ];
+        ranges.forEach(r => {
+          const count = stations.filter(s => s.priceKey === r.key).length;
+          const row = legend.querySelector(`.row[data-key="${r.key}"] .count`);
+          if (row) row.textContent = count;
+        });
+      }
+      applyFilters();
+      console.log(`✅ Clientes recargados: ${stations.length}`);
+    } catch (e) {
+      console.error('Error al recargar clientes:', e);
+    }
+  }
+
+  // ============================================================
+  //  14. ESCUCHAR ACTUALIZACIONES DESDE LOCALSTORAGE
+  // ============================================================
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'DUCTOS_ACTUALIZADO') {
+      console.log('🔄 Detectada actualización de ductos.');
+      recargarDuctos();
+    } else if (e.key === 'CLIENTES_ACTUALIZADO') {
+      console.log('🔄 Detectada actualización de clientes.');
+      recargarClientes();
+    }
+  });
+
+  // ============================================================
+  //  15. INICIALIZACIÓN FINAL
+  // ============================================================
+  document.getElementById('rTotal').textContent = stations.length;
+  setTimeout(() => map.invalidateSize(), 100);
+
+  function initStatesAndFilters() {
+    const states = [...new Set(stations.map(s => s.estado).filter(Boolean))].sort();
+    const select = document.getElementById('stateFilter');
+    states.forEach(st => select.appendChild(new Option(st, st)));
+    applyFilters();
+  }
+
+  initStatesAndFilters();
+  setTimeout(() => map.invalidateSize(), 500);
+
+  console.log(`✅ Mapa de Clientes Potenciales: ${stations.length} clientes cargados`);
+})();
+</script>
+</body>
+</html>
