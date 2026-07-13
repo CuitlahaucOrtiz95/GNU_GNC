@@ -677,7 +677,10 @@
 
   // --- Estado de capas ---
   let layerControl = null;
-  let currentToken = localStorage.getItem('MAPBOX_TOKEN') || '';
+  // Token de Mapbox embebido por defecto (GNU). Si un usuario guarda su propio
+  // token, ese tiene prioridad. Si no, se usa este automáticamente.
+  const DEFAULT_MAPBOX_TOKEN = 'pk.eyJ1IjoidGxhaHVhY2dudTk1IiwiYSI6ImNtcmR5d2JnNDBrMHoyeHB2OXo5ZmkxN3EifQ.3wJ8kuxlW_drQcVynhh-9w';
+  let currentToken = localStorage.getItem('MAPBOX_TOKEN') || DEFAULT_MAPBOX_TOKEN;
 
   function initBaseLayers(token) {
     if (layerControl) { map.removeControl(layerControl); layerControl = null; }
@@ -724,10 +727,14 @@
   const statusEl  = document.getElementById('tokenStatus');
 
   function showTokenModal() {
-    tokenIn.value = currentToken;
+    // Mostrar en el input solo el token personalizado (no el default GNU)
+    const custom = localStorage.getItem('MAPBOX_TOKEN') || '';
+    tokenIn.value = custom;
     tokenIn.classList.remove('error');
-    statusEl.innerHTML = '';
-    removeBtn.classList.toggle('hidden', !currentToken);
+    statusEl.innerHTML = custom
+      ? '<div class="status ok">Usando tu token personalizado</div>'
+      : '<div class="status ok">Usando el token GNU por defecto — puedes ingresar el tuyo si lo prefieres</div>';
+    removeBtn.classList.toggle('hidden', !custom);
     overlay.classList.add('visible');
     setTimeout(() => tokenIn.focus(), 200);
   }
@@ -763,16 +770,16 @@
 
   skipBtn.addEventListener('click', () => {
     hideTokenModal();
-    if (!currentToken) initBaseLayers('');
   });
 
   removeBtn.addEventListener('click', () => {
-    currentToken = '';
+    // Al eliminar el token personalizado, se vuelve al token GNU por defecto
     localStorage.removeItem('MAPBOX_TOKEN');
+    currentToken = DEFAULT_MAPBOX_TOKEN;
     tokenIn.value = '';
-    statusEl.innerHTML = '<div class="status err">Token eliminado — usando capas gratuitas</div>';
+    statusEl.innerHTML = '<div class="status ok">Token personalizado eliminado — usando el token GNU por defecto</div>';
     map.eachLayer(l => { if (l._url) map.removeLayer(l); });
-    initBaseLayers('');
+    initBaseLayers(currentToken);
     removeBtn.classList.add('hidden');
   });
 
