@@ -366,15 +366,14 @@
     .btn-gear .dot-active { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10b981; margin-left: 4px; }
 
     /* ===== ESTILOS ADICIONALES PARA MÓVILES ===== */
-    /* Ocultar algunos readouts en móviles muy pequeños */
     @media (max-width: 480px) {
       .topbar .stats { display: none; }
-      .topbar .readouts .readout:nth-child(3) { display: none; } /* ocultar "en vista" en pantallas muy pequeñas */
+      .topbar .readouts .readout:nth-child(3) { display: none; }
       .toolbar .dist-slider { flex: 1; min-width: 100px; }
       .toolbar .dist-slider input[type="range"] { width: 100%; }
       .toolbar .filters select { max-width: 140px; min-width: 100px; font-size: 0.7rem; }
       .toolbar .btn { font-size: 0.65rem; padding: 0.25rem 0.6rem; gap: 0.2rem; }
-      .toolbar .btn span { display: none; } /* ocultar texto de botones, solo iconos */
+      .toolbar .btn span { display: none; }
       .toolbar .btn i { font-size: 1rem; }
       .toolbar .search { min-width: 100px; }
       .toolbar .search input { font-size: 0.7rem; }
@@ -382,10 +381,9 @@
       .rail.hidden { transform: translateY(100%); }
       .ducto-legend { min-width: 90px; font-size: 9px; padding: 6px 10px; }
       .price-legend { min-width: 120px; font-size: 10px; padding: 8px 10px; }
-      .leaflet-control-zoom { zoom: 0.8; } /* ajustar tamaño de controles de zoom */
+      .leaflet-control-zoom { zoom: 0.8; }
     }
 
-    /* Ajustes para tabletas y móviles grandes */
     @media (max-width: 768px) {
       .topbar { flex-direction: row; flex-wrap: wrap; gap: 0.3rem; padding: 0.4rem 0.8rem; }
       .topbar .brand { font-size: 0.9rem; }
@@ -402,7 +400,6 @@
       .price-legend { min-width: 130px; font-size: 10px; padding: 8px 12px; }
     }
 
-    /* Mejorar tamaño de toque en móviles */
     @media (pointer: coarse) {
       .toolbar .btn { min-height: 44px; min-width: 44px; }
       .toolbar .filters select { min-height: 38px; }
@@ -476,10 +473,10 @@
 
     <span class="separator"></span>
     <button class="btn btn-secondary" id="toggleDuctosBtn" aria-label="Mostrar/ocultar ductos">
-      <i class="fas fa-eye" id="ductosToggleIcon"></i> <span id="ductosToggleLabel">Ductos</span>
+      <i class="fas fa-eye" id="ductosToggleIcon"></i> <span id="ductosToggleLabel">Ocultar ductos</span>
     </button>
     <button class="btn btn-primary" id="centerDuctosBtn" aria-label="Centrar en todos los ductos">
-      <i class="fas fa-expand"></i> <span>Ductos</span>
+      <i class="fas fa-expand"></i> <span>Centrar ductos</span>
     </button>
 
     <button class="btn btn-loc" id="locBtn" title="Centrar en mi ubicación" aria-label="Mi ubicación">
@@ -605,13 +602,240 @@
   cargarDuctosIniciales();
 
   // ============================================================
-  //  2. DATOS DE ZONAS (9 polígonos)
+  //  2. DATOS DE ZONAS (9 polígonos) - ¡AHORA COMPLETOS!
   // ============================================================
   window.ZONAS = {
     "type": "FeatureCollection",
     "features": [
-      // ... (los 9 polígonos, mismos que antes) ...
-      // Por brevedad, se mantienen pero en el código completo los tendrías.
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 1" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-106.950758,31.806516],
+            [-107.065289,27.527498],
+            [-105.922711,25.700673],
+            [-105.083082,23.894759],
+            [-102.693556,24.325956],
+            [-102.742994,24.83548],
+            [-102.616652,25.268424],
+            [-102.567213,25.872946],
+            [-102.715528,26.272612],
+            [-102.797926,27.492564],
+            [-103.300323,29.00694],
+            [-104.511277,29.642675],
+            [-104.70917,30.210238],
+            [-105.108948,30.746557],
+            [-105.600586,31.074109],
+            [-105.896941,31.319653],
+            [-106.247424,31.507192],
+            [-106.396853,31.747999],
+            [-106.950758,31.806516]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 2" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-102.62478,25.313842],
+            [-100.696679,25.040421],
+            [-100.426056,25.539121],
+            [-101.737634,26.750127],
+            [-101.715661,27.205399],
+            [-102.767602,27.034276],
+            [-102.715528,26.272612],
+            [-102.567213,25.872946],
+            [-102.62478,25.313842]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 3" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-101.715486,27.2052446],
+            [-101.7374591,26.7499726],
+            [-100.4258829,25.5389665],
+            [-97.5282427,25.6801416],
+            [-97.1821741,25.6974676],
+            [-97.1467812,25.9612856],
+            [-97.315383,25.9385286],
+            [-97.3742539,25.9155676],
+            [-97.3850309,25.8246456],
+            [-97.5721887,26.0064306],
+            [-97.7644084,26.0522096],
+            [-97.9512162,26.0557896],
+            [-98.2505928,26.0816955],
+            [-98.4455205,26.2186405],
+            [-98.6158883,26.2283825],
+            [-98.7502241,26.3243675],
+            [-98.9015319,26.3613515],
+            [-99.1146746,26.5096765],
+            [-99.2530945,26.8426905],
+            [-99.4343682,27.0238915],
+            [-99.3739443,27.1852575],
+            [-99.4906731,27.2878235],
+            [-99.4728202,27.4341825],
+            [-99.5222591,27.5925185],
+            [-99.7425498,27.6960455],
+            [-99.8999135,27.8720925],
+            [-101.715486,27.2052446]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 4" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-97.182343,25.697622],
+            [-100.426056,25.539121],
+            [-100.696679,25.040421],
+            [-101.733864,22.593775],
+            [-98.196266,21.355946],
+            [-97.548073,21.754447],
+            [-97.85569,22.598846],
+            [-97.763012,22.954704],
+            [-97.668922,24.582143],
+            [-97.182343,25.697622]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 5" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-101.733864,22.593775],
+            [-103.720781,23.157332],
+            [-104.259111,22.783071],
+            [-103.781205,22.067112],
+            [-103.720781,20.434015],
+            [-103.687822,18.606477],
+            [-103.484575,18.335548],
+            [-102.21016,17.917906],
+            [-102.006913,18.006738],
+            [-101.732255,17.79242],
+            [-100.092094,17.985314],
+            [-100.101707,19.204885],
+            [-100.629051,21.33804],
+            [-101.733864,22.593775]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 6" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-101.7310799,22.591186],
+            [-100.6262887,21.3354497],
+            [-100.0989547,19.2022945],
+            [-97.1169006,19.1659811],
+            [-96.2929393,19.4459281],
+            [-96.3478707,19.5080729],
+            [-96.4028015,19.7589978],
+            [-96.6033001,20.0533943],
+            [-97.1498624,20.614822],
+            [-97.2762038,20.8562728],
+            [-97.3970515,21.2407636],
+            [-97.2729933,21.5226778],
+            [-97.5453659,21.7518583],
+            [-98.1935467,21.3533563],
+            [-101.7310799,22.591186]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 7" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-96.295631,19.448514],
+            [-97.119606,19.168569],
+            [-98.777111,19.194358],
+            [-98.606823,18.932167],
+            [-96.643017,18.539411],
+            [-96.285961,18.103985],
+            [-95.11317,17.968181],
+            [-94.679211,17.772126],
+            [-94.311168,18.169238],
+            [-94.492443,18.14836],
+            [-94.59956,18.200551],
+            [-94.605053,18.281416],
+            [-94.701183,18.367458],
+            [-94.794567,18.542015],
+            [-94.989574,18.568053],
+            [-95.028026,18.6045],
+            [-95.176342,18.703387],
+            [-95.448254,18.698184],
+            [-95.678966,18.742406],
+            [-95.920666,18.882798],
+            [-95.948131,19.054228],
+            [-96.003063,19.04644],
+            [-96.079967,19.108738],
+            [-96.11018,19.199546],
+            [-96.299694,19.331777],
+            [-96.295631,19.448514]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 8" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-94.311168,18.169238],
+            [-94.679211,17.772126],
+            [-94.808446,17.648203],
+            [-94.785349,17.365413],
+            [-94.286699,17.249023],
+            [-93.846018,17.184448],
+            [-92.90394,16.870246],
+            [-91.862986,17.227365],
+            [-91.743364,18.055131],
+            [-92.813074,18.473079],
+            [-92.994578,18.432697],
+            [-93.200571,18.437908],
+            [-93.439524,18.432697],
+            [-94.311168,18.169238]
+          ]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "nombre": "Zona 9" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-95.351145,16.071247],
+            [-95.167124,16.168874],
+            [-95.068247,16.179426],
+            [-94.878733,16.211077],
+            [-94.675486,16.19789],
+            [-94.538157,16.182064],
+            [-93.846018,17.184448],
+            [-94.286699,17.249023],
+            [-94.785349,17.365413],
+            [-94.922678,17.066331],
+            [-95.653269,16.160961],
+            [-95.702708,15.875847],
+            [-95.461008,15.992054],
+            [-95.351145,16.071247]
+          ]]
+        }
+      }
     ]
   };
 
@@ -1171,12 +1395,12 @@
       if (ductosLayer) map.removeLayer(ductosLayer);
       ductosVisibles = false;
       document.getElementById('ductosToggleIcon').className = 'fas fa-eye-slash';
-      document.getElementById('ductosToggleLabel').textContent = 'Mostrar';
+      document.getElementById('ductosToggleLabel').textContent = 'Mostrar ductos';
     } else {
       if (ductosLayer) map.addLayer(ductosLayer);
       ductosVisibles = true;
       document.getElementById('ductosToggleIcon').className = 'fas fa-eye';
-      document.getElementById('ductosToggleLabel').textContent = 'Ocultar';
+      document.getElementById('ductosToggleLabel').textContent = 'Ocultar ductos';
     }
   }
 
