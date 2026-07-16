@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    /* ===== ESTILOS BASE (sin cambios) ===== */
+    /* ===== ESTILOS BASE ===== */
     :root {
       --primary: #1F5CA9;
       --primary-hover: #004a8f;
@@ -462,33 +462,26 @@
       <span id="distLabel">210 km</span>
     </div>
 
-    <!-- ===== PERFIL DE RUTA (TRANSPORTE PESADO) ===== -->
+    <!-- Perfil de ruta (transporte pesado) -->
     <div class="filters">
       <select id="routeProfile" aria-label="Perfil de ruta" title="Tipo de vehículo para calcular la ruta">
         <option value="car">🚗 Automóvil</option>
         <option value="truck">🚛 Transporte pesado</option>
       </select>
     </div>
-    <!-- ============================================= -->
 
     <span class="separator"></span>
 
-    <!-- Botón toggle de ductos (existente, corregido) -->
     <button class="btn btn-secondary" id="toggleDuctosBtn" aria-label="Mostrar/ocultar ductos">
       <i class="fas fa-eye" id="ductosToggleIcon"></i> <span id="ductosToggleLabel">Ocultar ductos</span>
     </button>
-
-    <!-- Botón Centrar ductos (modificado: ahora también limpia la ruta) -->
     <button class="btn btn-primary" id="centerDuctosBtn" aria-label="Centrar en todos los ductos y limpiar ruta">
       <i class="fas fa-expand"></i> <span>Limpiar Ruta</span>
     </button>
-
-    <!-- Nuevo botón para ocultar/mostrar zonas -->
     <button class="btn btn-secondary" id="toggleZonasBtn" aria-label="Mostrar/ocultar zonas">
       <i class="fas fa-layer-group" id="zonasToggleIcon"></i> <span id="zonasToggleLabel">Ocultar zonas</span>
     </button>
 
-    <!-- resto de botones -->
     <button class="btn btn-loc" id="locBtn" title="Centrar en mi ubicación" aria-label="Mi ubicación">
       <span class="loc-icon"><i class="fas fa-location-crosshairs"></i></span>
       <span class="spinner"><i class="fas fa-circle-notch"></i></span>
@@ -588,7 +581,7 @@
   }
 
   // ============================================================
-  //  1. CARGA DE DUCTOS DESDE localStorage (prioridad)
+  //  1. CARGA DE DUCTOS DESDE localStorage
   // ============================================================
   let ductosData = { type: "FeatureCollection", features: [] };
 
@@ -612,7 +605,7 @@
   cargarDuctosIniciales();
 
   // ============================================================
-  //  2. DATOS DE ZONAS (9 polígonos) - ¡AHORA COMPLETOS!
+  //  2. DATOS DE ZONAS (9 polígonos)
   // ============================================================
   window.ZONAS = {
     "type": "FeatureCollection",
@@ -874,11 +867,11 @@
   });
 
   // ============================================================
-  //  4. MAPA, CAPAS BASE Y MAPBOX
+  //  4. MAPA, CAPAS BASE Y MAPBOX (CORREGIDO)
   // ============================================================
   const map = L.map('map', { zoomControl: true }).setView([23.5, -102.5], 5);
 
-  // --- Capas gratuitas (siempre disponibles, sin token) ---
+  // --- Capas gratuitas (siempre disponibles) ---
   const freeLayers = {
     "🗺️ Calles (CARTO)": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap · © CARTO', subdomains: 'abcd', maxZoom: 19
@@ -891,7 +884,7 @@
     })
   };
 
-  // --- Construir capas de Mapbox (solo si hay token) ---
+  // --- Capas de Mapbox (solo con token válido) ---
   function buildMapboxLayers(token) {
     if (!token) return {};
     const mb = (style, label) => L.tileLayer(
@@ -909,25 +902,30 @@
     };
   }
 
-  // --- Estado de capas ---
+  // --- Estado ---
   let layerControl = null;
-  // Token de Mapbox embebido por defecto (GNU). Si un usuario guarda su propio
-  // token, ese tiene prioridad. Si no, se usa este automáticamente.
   const DEFAULT_MAPBOX_TOKEN = 'pk.eyJ1IjoidGxhaHVhY2dudTk1IiwiYSI6ImNtcmpjNmZjODAxZXQzMHB1Mm9vOWh0ZjEifQ.osKvuLgEUeb4YT2dN7-q9A';
   let currentToken = localStorage.getItem('MAPBOX_TOKEN') || DEFAULT_MAPBOX_TOKEN;
 
   function initBaseLayers(token) {
     if (layerControl) { map.removeControl(layerControl); layerControl = null; }
 
-    const mapboxLayers = buildMapboxLayers(token);
-    const allLayers = { ...mapboxLayers, ...freeLayers };
+    const mapboxLayers = token ? buildMapboxLayers(token) : {};
+    // Prioridad: gratuitas primero, luego Mapbox
+    const allLayers = {
+      "🗺️ Calles (CARTO)": freeLayers["🗺️ Calles (CARTO)"],
+      "🛰️ Satélite (Esri)": freeLayers["🛰️ Satélite (Esri)"],
+      "🌙 Oscuro (CARTO)": freeLayers["🌙 Oscuro (CARTO)"],
+      ...mapboxLayers
+    };
 
+    // Verificar si ya hay alguna capa activa
     let activeFound = false;
     map.eachLayer(l => { if (l._url) activeFound = true; });
 
+    // Si no hay capa activa, agregar Calles CARTO por defecto
     if (!activeFound) {
-      const firstKey = Object.keys(allLayers)[0];
-      allLayers[firstKey].addTo(map);
+      freeLayers["🗺️ Calles (CARTO)"].addTo(map);
     }
 
     layerControl = L.control.layers(allLayers).addTo(map);
@@ -942,7 +940,7 @@
     }
   }
 
-  // --- Validar token contra la API de Mapbox ---
+  // --- Validación de token ---
   async function validateToken(token) {
     try {
       const resp = await fetch(`https://api.mapbox.com/styles/v1/mapbox/streets-v12?access_token=${token}`);
@@ -952,7 +950,7 @@
     }
   }
 
-  // --- Lógica del modal ---
+  // --- Modal ---
   const overlay   = document.getElementById('tokenOverlay');
   const tokenIn   = document.getElementById('tokenInput');
   const saveBtn   = document.getElementById('tokenSaveBtn');
@@ -961,7 +959,6 @@
   const statusEl  = document.getElementById('tokenStatus');
 
   function showTokenModal() {
-    // Mostrar en el input solo el token personalizado (no el default GNU)
     const custom = localStorage.getItem('MAPBOX_TOKEN') || '';
     tokenIn.value = custom;
     tokenIn.classList.remove('error');
@@ -972,9 +969,7 @@
     overlay.classList.add('visible');
     setTimeout(() => tokenIn.focus(), 200);
   }
-  function hideTokenModal() {
-    overlay.classList.remove('visible');
-  }
+  function hideTokenModal() { overlay.classList.remove('visible'); }
 
   saveBtn.addEventListener('click', async () => {
     const t = tokenIn.value.trim();
@@ -1002,12 +997,8 @@
 
   tokenIn.addEventListener('keydown', e => { if (e.key === 'Enter') saveBtn.click(); });
 
-  skipBtn.addEventListener('click', () => {
-    hideTokenModal();
-  });
-
+  skipBtn.addEventListener('click', hideTokenModal);
   removeBtn.addEventListener('click', () => {
-    // Al eliminar el token personalizado, se vuelve al token GNU por defecto
     localStorage.removeItem('MAPBOX_TOKEN');
     currentToken = DEFAULT_MAPBOX_TOKEN;
     tokenIn.value = '';
@@ -1018,16 +1009,10 @@
   });
 
   overlay.addEventListener('click', e => { if (e.target === overlay) hideTokenModal(); });
-
   document.getElementById('mapboxGearBtn').addEventListener('click', showTokenModal);
 
-  // --- Inicialización ---
-  if (currentToken) {
-    initBaseLayers(currentToken);
-  } else {
-    initBaseLayers('');
-  }
-
+  // --- Inicialización del mapa con capa por defecto ---
+  initBaseLayers(currentToken);
   L.control.scale({ position: 'bottomleft', metric: true, imperial: false }).addTo(map);
 
   // ============================================================
@@ -1083,36 +1068,27 @@
 
   let ductosLayer = null;
   let ductosVisibles = true;
-
-  // ---- Estado del filtro iterativo ----
   const ductoFiltroIteracion = {};
   let ultimoTipoSeleccionado = null;
 
-  // ---- Obtener tipos únicos (normalizados, sin "Desconocido") ----
   function obtenerTiposUnicos(datos) {
     const mapTipos = new Map();
     datos.features.forEach(f => {
       const tipoOriginal = f.properties.Tipo || f.properties.tipo || 'Desconocido';
       let tipoNormalizado = tipoOriginal.trim();
       const lower = tipoNormalizado.toLowerCase();
-      if (lower.includes('cenagas') && lower.includes('existente')) {
-        tipoNormalizado = 'Gasoductos existentes operados por CENAGAS';
-      }
+      if (lower.includes('cenagas') && lower.includes('existente')) tipoNormalizado = 'Gasoductos existentes operados por CENAGAS';
       if (lower === 'desconocido') return;
       const clave = tipoNormalizado.toLowerCase();
-      if (!mapTipos.has(clave)) {
-        mapTipos.set(clave, tipoNormalizado);
-      }
+      if (!mapTipos.has(clave)) mapTipos.set(clave, tipoNormalizado);
     });
     return Array.from(mapTipos.values()).sort((a,b) => a.localeCompare(b));
   }
 
-  // ---- Poblar el <select> ----
   function poblarFiltroDuctos(datos) {
     const select = document.getElementById('ductoFilter');
     while (select.options.length > 1) select.remove(1);
     const tipos = obtenerTiposUnicos(datos);
-    console.log(`🔍 Tipos de ductos encontrados: ${tipos.length}`, tipos);
     tipos.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t;
@@ -1124,7 +1100,6 @@
     ultimoTipoSeleccionado = null;
   }
 
-  // ---- Actualizar leyenda ----
   function actualizarLeyendaDuctos(datos) {
     const legendDiv = document.querySelector('.ducto-legend');
     if (!legendDiv) return;
@@ -1165,7 +1140,6 @@
     }
   }
 
-  // ---- Aplicar filtro iterativo ----
   function aplicarFiltroIterativo(tipo) {
     if (tipo === 'all') {
       for (const key in ductoFiltroIteracion) delete ductoFiltroIteracion[key];
@@ -1223,7 +1197,6 @@
     });
   }
 
-  // ---- Filtrar ductos (visibilidad) ----
   function filtrarDuctos(tipoSeleccionado, index) {
     if (!ductosLayer) return;
     const tipoNorm = tipoSeleccionado.trim().toLowerCase();
@@ -1233,9 +1206,7 @@
       ductosLayer.eachLayer(function(layer) {
         const props = layer.feature ? layer.feature.properties : {};
         const tipoFeature = (props.tipo || "CENAGAS (existente)").trim().toLowerCase();
-        if (tipoFeature === tipoNorm) {
-          layersDelTipo.push(layer);
-        }
+        if (tipoFeature === tipoNorm) layersDelTipo.push(layer);
       });
       const orderMap = {};
       ductosData.features.forEach((f, i) => {
@@ -1256,17 +1227,13 @@
       const props = layer.feature ? layer.feature.properties : {};
       const tipoFeature = (props.tipo || "CENAGAS (existente)").trim().toLowerCase();
       let visible = false;
-      if (tipoNorm === 'all') {
-        visible = true;
-      } else if (tipoFeature === tipoNorm) {
-        if (index === 0) {
-          visible = true;
-        } else {
+      if (tipoNorm === 'all') visible = true;
+      else if (tipoFeature === tipoNorm) {
+        if (index === 0) visible = true;
+        else {
           const pos = layersDelTipo.indexOf(layer);
           visible = (pos === index - 1);
         }
-      } else {
-        visible = false;
       }
       if (typeof layer.setStyle === 'function') {
         layer.setStyle({ opacity: visible ? 0.85 : 0.05, weight: visible ? 3 : 1 });
@@ -1276,7 +1243,6 @@
     });
   }
 
-  // ---- Centrar en ductos de un tipo ----
   function centrarEnDuctos(tipo) {
     if (!ductosLayer || !ductosLayer.getLayers().length) {
       alert('No hay ductos cargados.');
@@ -1315,7 +1281,6 @@
     }
   }
 
-  // ---- Crear la capa de ductos ----
   function crearCapaDuctos(datos) {
     if (ductosLayer) {
       map.removeLayer(ductosLayer);
@@ -1359,7 +1324,6 @@
     }
   }
 
-  // ---- AÑADIR LEYENDA DE DUCTOS (control Leaflet) ----
   function agregarLeyendaDuctos() {
     const control = L.control({ position: 'bottomleft' });
     control.onAdd = function() {
@@ -1377,7 +1341,6 @@
     console.log('✅ Leyenda de ductos añadida al mapa.');
   }
 
-  // ---- Centrar en todos los ductos (usando ductosData) ----
   function centrarEnTodosDuctos() {
     if (!ductosData || ductosData.features.length === 0) {
       map.flyTo([23.5, -102.5], 5);
@@ -1399,7 +1362,6 @@
     }
   }
 
-  // ---- Toggle de visibilidad de ductos ----
   function toggleDuctos() {
     if (ductosVisibles) {
       if (ductosLayer) map.removeLayer(ductosLayer);
@@ -1414,18 +1376,14 @@
     }
   }
 
-  // ---- Inicializar ductos ----
   crearCapaDuctos(ductosData);
   poblarFiltroDuctos(ductosData);
   agregarLeyendaDuctos();
-
-  // ---- Evento del <select> ----
   document.getElementById('ductoFilter').addEventListener('change', function() {
     const tipo = this.value;
     aplicarFiltroIterativo(tipo);
   });
 
-  // ---- Recarga de ductos (desde localStorage) ----
   function recargarDuctos() {
     const nuevoJS = localStorage.getItem('DUCTOS_JS');
     if (!nuevoJS) return;
@@ -1452,7 +1410,7 @@
   }
 
   // ============================================================
-  //  6. ZONAS DE REGIONALIZACIÓN (fijas)
+  //  6. ZONAS DE REGIONALIZACIÓN
   // ============================================================
   const ZONAS = window.ZONAS || { type: "FeatureCollection", features: [] };
   const zonaSelect = document.getElementById('zonaFilter');
@@ -1482,7 +1440,7 @@
   });
 
   // ============================================================
-  //  7. CLÚSTER Y MARCADORES DE CLIENTES (dinámicos)
+  //  7. CLÚSTER Y MARCADORES DE CLIENTES
   // ============================================================
   const cluster = L.markerClusterGroup({
     maxClusterRadius: 50,
@@ -1605,7 +1563,6 @@
     if (rutaMarcador) { map.removeLayer(rutaMarcador); rutaMarcador = null; }
   }
 
-  // Evento delegado con stopPropagation
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.btn-route');
     if (btn) {
@@ -1835,18 +1792,14 @@
     setTimeout(() => map.invalidateSize(), 300);
   });
 
-  // ---- Botón toggle ductos (ya existe el listener, lo dejamos) ----
   document.getElementById('toggleDuctosBtn').addEventListener('click', toggleDuctos);
 
-  // ---- Botón Centrar ductos: ahora también limpia la ruta ----
   document.getElementById('centerDuctosBtn').addEventListener('click', function() {
-    limpiarRuta();               // limpia la ruta dibujada
-    centrarEnTodosDuctos();      // centra en todos los ductos
+    limpiarRuta();
+    centrarEnTodosDuctos();
   });
 
-  // ---- Nuevo: Toggle de visibilidad de zonas ----
-  let zonasVisibles = true;  // estado inicial (visible)
-
+  let zonasVisibles = true;
   function toggleZonas() {
     if (zonasVisibles) {
       if (zonasLayer) map.removeLayer(zonasLayer);
@@ -1860,7 +1813,6 @@
       document.getElementById('zonasToggleLabel').textContent = 'Ocultar zonas';
     }
   }
-
   document.getElementById('toggleZonasBtn').addEventListener('click', toggleZonas);
 
   document.getElementById('exportBtn').addEventListener('click', function() {
